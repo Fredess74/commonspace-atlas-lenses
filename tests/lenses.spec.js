@@ -121,3 +121,39 @@ test("the popup carries the six-signal strip, and approximate pins look approxim
   const iconHtml = await page.evaluate(id => markers[id].options.icon.options.html, approx.id);
   expect(iconHtml).toContain("approx");
 });
+
+test("the 3D toggle mounts #map3d, or falls back to 2D with a notice — never a blank map", async ({ page }) => {
+  await page.goto("./?asof=2026-10");
+  await waitForApp(page);
+  await page.locator("#mode3d").click();
+  await page.waitForFunction(() => !!document.getElementById("map3d") || document.getElementById("map3dNote").classList.contains("on"));
+  const state = await page.evaluate(() => ({ mounted: !!document.getElementById("map3d"), note: document.getElementById("map3dNote").textContent }));
+  if(state.mounted){
+    await expect(page.locator("#mode3d")).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("#regions3d")).toBeVisible();
+    expect(new URL(page.url()).searchParams.get("mode")).toBe("3d");
+    // leaving 3D destroys the MapLibre map and hands the camera back to Leaflet
+    await page.locator("#mode3d").click();
+    await expect(page.locator("#map3d")).toHaveCount(0);
+  } else {
+    expect(state.note).toContain("2D");
+  }
+  await expect(page.locator("#map .leaflet-marker-icon").first()).toBeVisible();
+});
+
+test("ecosystem numbers are buttons that filter the map", async ({ page }) => {
+  await page.goto("./?asof=2026-10");
+  await waitForApp(page);
+  await page.evaluate(() => setMapView("state", false));
+  await page.locator("#ecoToggle").click();
+  const approxRow = page.locator('#ecoBody .eco-row[data-drill="approx"]');
+  await expect(approxRow).toBeVisible();
+  await approxRow.click();
+  await expect(page.locator("#drillChip")).toContainText("Approximate pins");
+  // the results list is the drill-down, and every row in it is approximate
+  const ids = await page.locator("#lpList .lp-item").evaluateAll(els => els.map(e => e.dataset.id));
+  expect(ids.length).toBeGreaterThan(0);
+  for(const id of ids) expect(byId[id].approx).toBe(true);
+  await page.locator("#drillChip button").click();
+  await expect(page.locator("#drillChip")).not.toHaveClass(/\bon\b/);
+});

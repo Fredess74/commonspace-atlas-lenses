@@ -390,6 +390,43 @@ a.chip{color:inherit;text-decoration:none}
 .lg-row{display:flex;gap:8px;align-items:center}
 .lg-row .lens-pin{width:22px;height:22px;flex:none}
 .lg-note{font-size:11px;line-height:1.4}
+/* ecosystem panel ("mini terminal"): every number is a button that filters the map */
+.eco-panel{position:absolute;z-index:1001;top:62px;left:54px;width:290px;max-height:calc(100% - 200px);overflow-y:auto;
+  background:rgba(6,9,18,.95);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:12px;color:var(--text)}
+.eco-panel[hidden]{display:none}
+html:not(.dark) .eco-panel{background:rgba(255,255,255,.97)}
+.eco-title{font-size:11px;text-transform:uppercase;letter-spacing:1.3px;color:var(--muted);margin:0 0 6px}
+.eco-row{appearance:none;display:flex;width:100%;gap:8px;align-items:baseline;background:none;border:0;border-radius:6px;color:inherit;
+  font:inherit;text-align:left;padding:4px 6px;cursor:pointer;min-height:28px}
+.eco-row:hover,.eco-row[aria-pressed="true"]{background:rgba(255,198,0,.12)}
+.eco-row .v{margin-left:auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums;font-weight:700;color:#ffd54f}
+html:not(.dark) .eco-row .v{color:#7a5300}
+.eco-sub{font-size:10.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin:8px 6px 2px}
+.eco-note{font-size:10.5px;color:var(--muted);margin:6px 6px 0;line-height:1.4}
+.drill-chip{position:absolute;z-index:1000;left:50%;transform:translateX(-50%);top:14px;display:none;gap:8px;align-items:center;
+  background:#ffc600;color:#000;border-radius:99px;padding:5px 6px 5px 14px;font-size:12.5px;font-weight:700}
+.drill-chip.on{display:flex}
+.drill-chip button{min-height:28px;border-radius:99px;border:0;background:rgba(0,0,0,.15);color:#000;font:700 12px inherit;font-family:inherit;padding:4px 10px;cursor:pointer}
+/* 3D: a native MapLibre map over the Leaflet one, created on demand and destroyed on exit */
+#map3d{position:absolute;inset:0;z-index:990;background:#0a0f1e}
+.map-wrap.is3d .map-search,.map-wrap.is3d .map-view-switch,.map-wrap.is3d #map .leaflet-control-container{visibility:hidden}
+.regions3d{position:absolute;z-index:1001;left:14px;top:14px;width:220px;background:rgba(6,9,18,.95);border:1px solid var(--line);border-radius:12px;padding:8px}
+.regions3d[hidden]{display:none}
+html:not(.dark) .regions3d{background:rgba(255,255,255,.97)}
+.regions3d h2{font-size:11px;text-transform:uppercase;letter-spacing:1.3px;color:var(--muted);margin:2px 4px 6px}
+.rg-btn{appearance:none;display:flex;width:100%;gap:6px;align-items:baseline;background:none;border:1px solid transparent;border-radius:8px;color:var(--text);
+  font:500 12.5px inherit;font-family:inherit;text-align:left;padding:6px 8px;cursor:pointer;min-height:32px}
+.rg-btn[aria-current="true"]{border-color:#ffc600;background:rgba(255,198,0,.1)}
+.rg-btn .v{margin-left:auto;font-family:ui-monospace,Consolas,monospace;color:var(--muted)}
+.rg-gap{font-size:11.5px;color:var(--text);margin:6px 4px 2px;line-height:1.4}
+.map3d-note{position:absolute;z-index:1002;left:50%;transform:translateX(-50%);top:56px;display:none;max-width:min(520px,calc(100% - 28px));
+  background:rgba(10,15,30,.95);border:1px solid rgba(251,191,36,.5);color:var(--text);border-radius:10px;padding:8px 12px;font-size:12.5px}
+.map3d-note.on{display:block}
+html:not(.dark) .map3d-note{background:#fff}
+@media(max-width:720px){
+  .eco-panel{left:8px;right:8px;width:auto;top:110px;max-height:40%}
+  .regions3d{width:auto;right:8px;left:8px;max-height:34%;overflow-y:auto}
+}
 @media(max-width:720px){
   .lens-bar{padding:8px 12px}
   .lens-panel{top:auto;left:0;right:0;bottom:0;width:auto;max-height:46%;border-radius:14px 14px 0 0}
@@ -643,6 +680,8 @@ browse the <a href="e/">full organization index</a> or use the open dataset
     </div>
     <div class="lens-near">
       <button type="button" class="lens-btn" id="netToggle" aria-pressed="false" title="Draw every recorded connection the active lens cares about">🕸 Show network</button>
+      <button type="button" class="lens-btn" id="ecoToggle" aria-pressed="false" aria-controls="ecoPanel" title="Live numbers for this lens and the part of the map in view">▤ Ecosystem stats</button>
+      <button type="button" class="lens-btn" id="mode3d" aria-pressed="false" title="Tilted 3D map with terrain and buildings, across the whole Commonwealth">⛰ 3D</button>
     </div>
     <p class="lens-q" id="lensQ" aria-live="polite"></p>
   </div>
@@ -657,7 +696,14 @@ browse the <a href="e/">full organization index</a> or use the open dataset
       <div id="lpGap"></div>
       <ol class="lp-list" id="lpList" aria-label="Ranked results — the map-free view of this lens. Arrow keys move, Enter selects, Escape clears."></ol>
     </aside>
+    <section class="eco-panel" id="ecoPanel" aria-labelledby="ecoTitle" hidden>
+      <h2 id="ecoTitle" class="eco-title">Ecosystem · in view</h2>
+      <div id="ecoBody"></div>
+    </section>
     <div class="arc-info" id="arcInfo" role="status" aria-live="polite"></div>
+    <div class="drill-chip" id="drillChip" role="status" aria-live="polite"></div>
+    <nav class="regions3d" id="regions3d" aria-label="Region chapters (arrow keys move between them)" hidden></nav>
+    <div class="map3d-note" id="map3dNote" role="status" aria-live="polite"></div>
     <div id="map"></div>
     <div class="map-search">
       <input id="mapSearch" type="text" placeholder="Search the ecosystem…" autocomplete="off">
@@ -2111,7 +2157,7 @@ const TOWNS = {
   pittsfield:["Pittsfield",42.4501,-73.2454], "new-bedford":["New Bedford",41.6362,-70.9342], "fall-river":["Fall River",41.7015,-71.1550],
   hyannis:["Hyannis",41.6525,-70.2881],
 };
-const LS = { lens:"all", near:null, r:25, network:false, selected:null, results:[] };
+const LS = { lens:"all", near:null, r:25, network:false, selected:null, results:[], drill:null, mode:"2d", keep:new Set(), filtering:false };
 const arcLayer = L.layerGroup().addTo(map), netLayer = L.layerGroup(), nearLayer = L.layerGroup().addTo(map), haloLayer = L.layerGroup();
 const kmOf = (near, d) => metresBetween(near.lat, near.lng, d.lat, d.lng) / 1000;
 const fmtKm = km => km < 10 ? km.toFixed(1) + " km" : Math.round(km) + " km";
@@ -2216,11 +2262,12 @@ function setNear(key, r){
 }
 
 function lensRefresh(opts = {}){
-  const lens = LENSES[LS.lens];
-  const rows = (LS.lens !== "all" || LS.near) ? rankLens(LS.lens, LS.near, LS.r) : [];
+  const lens = LENSES[LS.lens], D = LS.drill && DRILLS[LS.drill];
+  const filtering = LS.lens !== "all" || !!LS.near || !!D;
+  const rows = filtering ? rankLens(LS.lens, LS.near, LS.r).filter(r => !D || D.test(r.d)) : [];
   LS.results = rows;
   const keep = new Set(rows.filter(r => r.inRadius).map(r => r.d.id));
-  const filtering = LS.lens !== "all" || !!LS.near;
+  LS.keep = keep; LS.filtering = filtering;
   // pins: dim what the lens doesn't emphasise, never hide it
   DATA.forEach(d => { const m = markers[d.id]; if(m) m.setIcon(pinIcon(d, {dim: filtering && !keep.has(d.id), sel: LS.selected === d.id})); });
   // near circle
@@ -2228,7 +2275,10 @@ function lensRefresh(opts = {}){
   if(LS.near) L_circle(LS.near);
   $("lensQ").innerHTML = `<b>${lens.icon} ${lens.label}:</b> ${esc(lens.q)}`;
   renderResults(rows);
+  renderDrillChip(keep.size);
   if(LS.network) drawNetwork();
+  refresh3d();
+  ecoRefresh();
   lensWriteURL();
   if(opts.fit !== false && LS.near && currentView === "map" && !LS.selected)
     map.fitBounds(L.latLng(LS.near.lat, LS.near.lng).toBounds(LS.r * 2000), {animate: !reduceMotion(), padding:[20,20]});
@@ -2239,11 +2289,11 @@ function L_circle(near){
 
 function renderResults(rows){
   const panel = $("lensPanel"), list = $("lpList"), lens = LENSES[LS.lens];
-  const show = LS.lens !== "all" || !!LS.near;
+  const show = LS.lens !== "all" || !!LS.near || !!LS.drill;
   panel.classList.toggle("on", show);
   if(!show){ list.innerHTML = ""; $("lpGap").innerHTML = ""; $("lpSum").textContent = ""; return; }
   const inR = rows.filter(r => r.inRadius);
-  const where = LS.near ? ` near ${LS.near.name}` : "";
+  const where = (LS.near ? ` near ${LS.near.name}` : "") + (LS.drill ? ` · ${DRILLS[LS.drill].label}` : "");
   $("lpTitle").textContent = `${lens.icon} ${lens.label} lens${where}`;
   $("lpSub").textContent = LS.near ? `Within ${LS.r} km · ranked by relevance, distance, freshness and connections`
                                    : "Ranked by relevance, freshness and connections";
@@ -2448,16 +2498,17 @@ $("nearMe").addEventListener("click", () => {
 $("netToggle").addEventListener("click", () => {
   LS.network = !LS.network;
   $("netToggle").setAttribute("aria-pressed", String(LS.network));
-  drawNetwork();
+  drawNetwork(); arcs3d(); ecoRefresh();
 });
 function lensWriteURL(){
   const u = new URL(location.href), set = (k, v) => v ? u.searchParams.set(k, v) : u.searchParams.delete(k);
   set("lens", LS.lens !== "all" ? LS.lens : "");
   set("near", LS.near && LS.near.key !== "me" ? LS.near.key : "");   // never write a visitor's coordinates
   set("r", LS.near && LS.near.key !== "me" && LS.r !== 25 ? String(LS.r) : "");
+  set("mode", LS.mode === "3d" ? "3d" : "");
   try{ history.replaceState(null, "", u.pathname + u.search + u.hash); }catch(e){}
 }
-// ?lens=student&near=amherst&r=25 (combines with ?entry= and #view); unknown values are ignored
+// ?lens=student&near=amherst&r=25&mode=3d (combines with ?entry= and #view); unknown values are ignored
 function lensApplyParams(){
   const p = new URLSearchParams(location.search);
   const r = +p.get("r");
@@ -2467,8 +2518,344 @@ function lensApplyParams(){
   document.querySelectorAll(".lens-chip").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lens === LS.lens)));
   if(p.get("lens") || p.get("near")) lensRefresh({fit: !p.get("entry")});
   else $("lensQ").innerHTML = `<b>${LENSES.all.icon} ${LENSES.all.label}:</b> ${esc(LENSES.all.q)}`;
+  // a shared lens link should land on the map, not on the hero above it
+  if((p.get("lens") || p.get("near") || p.get("mode")) && currentView === "map"){
+    const nav = document.querySelector(".nav");
+    window.scrollTo({top: Math.max(0, $("view-map").offsetTop - (nav ? nav.offsetHeight : 0))});
+  }
+  // 3D is opt-in on phones: a shared ?mode=3d link opens it only on wide screens
+  if(p.get("mode") === "3d" && currentView === "map" && innerWidth >= 768) setTimeout(enter3d, 200);
 }
 renderLensBar();
+
+/* === Atlas Lenses: ecosystem panel ("mini terminal") ===================
+   Recomputed for the active lens and the part of the map in view. Every
+   number is a button that filters the map to exactly those entries, so the
+   morning's doubt numbers are each one click away. */
+// regions are approximate on purpose: each entry counts toward its nearest centre
+const REGIONS = [
+  {key:"boston",     name:"Greater Boston",   c:[42.355,-71.075], z:10.8},
+  {key:"route128",   name:"Route 128",        c:[42.440,-71.240], z:10.6},
+  {key:"merrimack",  name:"Merrimack Valley", c:[42.680,-71.200], z:10.6},
+  {key:"worcester",  name:"Worcester",        c:[42.270,-71.800], z:10.8},
+  {key:"pioneer",    name:"Pioneer Valley",   c:[42.280,-72.600], z:9.8},
+  {key:"berkshires", name:"Berkshires",       c:[42.400,-73.220], z:9.6},
+  {key:"southcoast", name:"South Coast",      c:[41.670,-71.020], z:10},
+  {key:"cape",       name:"Cape & Islands",   c:[41.620,-70.350], z:9.2},
+];
+const REGION_OF = new Map(DATA.map(d => [d.id, REGIONS.reduce((b, r) => {
+  const m = metresBetween(d.lat, d.lng, r.c[0], r.c[1]); return m < b.m ? {key:r.key, m} : b; }, {key:null, m:Infinity}).key]));
+const monthsOf = d => trustOf(d).months;
+const DRILLS = {
+  fresh:   {label:"Verified in the last 2 months", test:d => monthsOf(d) !== null && monthsOf(d) <= 2},
+  stale:   {label:"Verified 4+ months ago",        test:d => monthsOf(d) !== null && monthsOf(d) >= 4},
+  approx:  {label:"Approximate pins",              test:d => !!d.approx},
+  new:     {label:"New this month",                test:d => trustOf(d).isNew},
+  nolinks: {label:"No connections recorded",       test:d => !degreeOf(d.id)},
+  nostage: {label:"Startups with no stage",        test:d => d.cat === "startup" && !(d.stages||[]).length},
+  nocheck: {label:"Funders with no check size",    test:d => isFunder(d) && !checkSizeOf(d)},
+};
+REGIONS.forEach(r => DRILLS["region-" + r.key] = {label:r.name, test:d => REGION_OF.get(d.id) === r.key, region:r});
+function setDrill(key){
+  LS.drill = key && DRILLS[key] && LS.drill !== key ? key : null;
+  const D = LS.drill && DRILLS[LS.drill];
+  if(D && D.region){
+    if(map3d) fly3d(D.region);
+    else if(currentView === "map") reduceMotion() ? map.setView(D.region.c, Math.round(D.region.z + 1)) : map.flyTo(D.region.c, Math.round(D.region.z + 1), {duration:.9});
+  }
+  lensRefresh({fit:false});
+}
+window.setDrill = setDrill;
+function viewTest(){
+  try{
+    if(map3d){ const b = map3d.getBounds(); return d => b.contains([d.lng, d.lat]); }
+    const b = map.getBounds(); return d => b.contains([d.lat, d.lng]);
+  }catch(e){ return () => true; }
+}
+function ecoRefresh(){
+  const box = $("ecoBody"); if(!box || $("ecoPanel").hidden) return;
+  const lens = LENSES[LS.lens], inView = viewTest();
+  const inLens = d => LS.lens === "all" || lensRelevance(d, lens).s > 0;
+  const base = DATA.filter(d => inLens(d) && inView(d)), ids = new Set(base.map(d => d.id));
+  const n = k => base.filter(DRILLS[k].test).length;
+  const pct = k => base.length ? Math.round(100 * n(k) / base.length) + "%" : "—";
+  const edges = EDGES.filter(([a, b]) => ids.has(a) && ids.has(b)).length;
+  const hubs = [...base].sort((a, b) => degreeOf(b.id) - degreeOf(a.id)).filter(d => degreeOf(d.id)).slice(0, 5);
+  const row = (key, label, v) => `<button type="button" class="eco-row" ${key ? `data-drill="${key}" aria-pressed="${LS.drill === key}"` : `data-drill=""`}><span>${label}</span><span class="v">${v}</span></button>`;
+  $("ecoTitle").textContent = `Ecosystem · ${lens.label} lens · in view`;
+  const all = DATA.filter(inLens);
+  box.innerHTML =
+    row("", "Organizations in view", base.length) +
+    row("fresh", "Verified in the last 2 months", pct("fresh")) +
+    row("stale", "Verified 4+ months ago", n("stale")) +
+    row("approx", "Approximate pins", `${pct("approx")} · ${n("approx")}`) +
+    row("new", "New this month", n("new")) +
+    row("nolinks", "No connections recorded", n("nolinks")) +
+    row("nostage", "Startups with no stage", n("nostage")) +
+    row("nocheck", "Funders with no check size", n("nocheck")) +
+    `<button type="button" class="eco-row" data-net="1" aria-pressed="${LS.network}"><span>Connections in view (both ends)</span><span class="v">${edges}</span></button>` +
+    `<div class="eco-sub">Top hubs by connections</div>` +
+    (hubs.length ? hubs.map(d => `<button type="button" class="eco-row" data-hub="${d.id}"><span>${esc(d.name)}</span><span class="v">${degreeOf(d.id)}</span></button>`).join("")
+                 : `<div class="eco-note">No connected entries in view.</div>`) +
+    `<div class="eco-sub">Coverage by region (whole state)</div>` +
+    REGIONS.map(r => row("region-" + r.key, r.name, all.filter(DRILLS["region-" + r.key].test).length)).join("") +
+    `<div class="eco-note">Each entry counts toward its nearest region centre. A zero is a gap in the map, not proof there's no AI there.</div>`;
+}
+let ecoTimer = null;
+const ecoRefreshSoon = () => { clearTimeout(ecoTimer); ecoTimer = setTimeout(ecoRefresh, 120); };
+map.on("moveend", ecoRefreshSoon);
+$("ecoBody").addEventListener("click", e => {
+  const b = e.target.closest(".eco-row"); if(!b) return;
+  if(b.dataset.hub) return lensSelect(b.dataset.hub, {pan:true});
+  if(b.dataset.net){ $("netToggle").click(); return ecoRefresh(); }
+  setDrill(b.dataset.drill || null);
+});
+$("ecoToggle").addEventListener("click", () => {
+  const p = $("ecoPanel"); p.hidden = !p.hidden;
+  $("ecoToggle").setAttribute("aria-pressed", String(!p.hidden));
+  ecoRefresh();
+});
+function renderDrillChip(count){
+  const c = $("drillChip"), D = LS.drill && DRILLS[LS.drill];
+  c.classList.toggle("on", !!D);
+  c.innerHTML = D ? `<span>Showing: ${esc(D.label)} · ${count}</span><button type="button" onclick="setDrill(null)" aria-label="Clear this filter">✕ Clear</button>` : "";
+}
+
+/* === Atlas Lenses: 3D across the Commonwealth ===========================
+   Leaflet cannot tilt, so 3D mounts a native MapLibre GL map (already loaded
+   by the page for the basemap) over the Leaflet one, and destroys it on exit.
+   Keyless throughout: OpenFreeMap style + buildings, AWS Open Data terrain
+   tiles, and deck.gl (MIT) loaded only the first time 3D is switched on.
+   Every step is guarded: if anything fails, the 2D map stays, with a notice. */
+const TERRAIN_TILES = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png";
+const DECK_URL = "https://cdn.jsdelivr.net/npm/deck.gl@9.4.0/dist.min.js";
+const CHAPTERS = [
+  {name:"Greater Boston", region:"boston", c:[42.355,-71.075], z:10.8},
+  {name:"Kendall / Cambridge", c:[42.3625,-71.0862], z:14.8, r:1.2},
+  {name:"Seaport", c:[42.3505,-71.0446], z:14.8, r:1.2},
+  ...["route128","merrimack","worcester","pioneer","berkshires","southcoast","cape"].map(k => {
+    const r = REGIONS.find(x => x.key === k); return {name:r.name, region:k, c:r.c, z:r.z}; }),
+];
+let map3d = null, deckOverlay = null, deckLoading = null, terrainOK = null, chapterIdx = -1, hover3d = null;
+const webglOK = () => { try{ const c = document.createElement("canvas"); return !!(c.getContext("webgl2") || c.getContext("webgl")); }catch(e){ return false; } };
+function note3d(msg){
+  const n = $("map3dNote"); n.textContent = msg || ""; n.classList.toggle("on", !!msg);
+  if(msg) setTimeout(() => { if(n.textContent === msg) n.classList.remove("on"); }, 8000);
+}
+const isDim = id => !!LS.filtering && !LS.keep.has(id);
+function geo3d(){
+  return {type:"FeatureCollection", features: DATA.map(d => { const t = trustOf(d); return {type:"Feature",
+    geometry:{type:"Point", coordinates:[d.lng, d.lat]},
+    properties:{id:d.id, name:d.name, opacity:t.opacity, isNew:t.isNew, approx:t.approx, degree:degreeOf(d.id),
+      catColor:cColor(d.cat), dim:isDim(d.id), sel:LS.selected === d.id}}; })};
+}
+function set3dButton(on){ $("mode3d").setAttribute("aria-pressed", String(on)); }
+function enter3d(){
+  if(map3d) return;
+  if(!webglOK()){ note3d("3D needs WebGL, which this browser doesn't offer, so you're on the 2D map."); return; }
+  const wrap = document.querySelector(".map-wrap");
+  try{
+    const el = document.createElement("div");
+    el.id = "map3d"; el.setAttribute("role", "region");
+    el.setAttribute("aria-label", "3D map of Massachusetts. The ranked results list is the map-free view of the same entries.");
+    wrap.insertBefore(el, $("map"));
+    const c = map.getCenter();
+    map3d = new maplibregl.Map({ container:el, style:new URL(MAP_STYLES[currentTheme()], location.href).href,
+      center:[c.lng, c.lat], zoom:Math.max(5, map.getZoom() - 1), pitch:55, bearing:-15, maxPitch:75,
+      attributionControl:{compact:true, customAttribution:'Terrain: <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">AWS Open Data Terrain Tiles</a>'} });
+    map3d.addControl(new maplibregl.NavigationControl({visualizePitch:true}), "bottom-right");
+    map3d.on("error", e => console.warn("3D map:", e && e.error && e.error.message));
+    map3d.on("load", () => { try{ setup3d(); }catch(e){ fail3d(e); } });
+    wrap.classList.add("is3d"); set3dButton(true); LS.mode = "3d"; lensWriteURL();
+    renderRegions(); $("regions3d").hidden = false;
+  }catch(e){ fail3d(e); }
+}
+function fail3d(e){
+  console.warn("3D unavailable:", e);
+  exit3d();
+  note3d("3D couldn't start here, so you're on the 2D map. Everything else still works.");
+}
+function exit3d(){
+  const m = map3d; map3d = null; deckOverlay = null; hover3d = null;
+  if(m){
+    try{ const c = m.getCenter(); map.setView([c.lat, c.lng], Math.round(m.getZoom() + 1)); }catch(e){}
+    try{ m.remove(); }catch(e){}
+  }
+  const el = $("map3d"); if(el) el.remove();
+  document.querySelector(".map-wrap").classList.remove("is3d");
+  $("regions3d").hidden = true;
+  set3dButton(false); LS.mode = "2d"; lensWriteURL();
+  setTimeout(() => map.invalidateSize(), 30);
+}
+window.enter3d = enter3d; window.exit3d = exit3d;
+function setup3d(){
+  const m = map3d, layers = m.getStyle().layers;
+  const firstSymbol = (layers.find(l => l.type === "symbol") || {}).id;
+  const firstLine = (layers.find(l => l.type === "line") || {}).id;
+  const dark = currentTheme() === "dark";
+  // buildings: Kendall, the Seaport and Downtown stand up at street zoom
+  try{
+    m.addLayer({id:"lens-buildings", type:"fill-extrusion", source:"openmaptiles", "source-layer":"building", minzoom:13,
+      paint:{"fill-extrusion-color": dark ? "#26304d" : "#d5d9e2",
+             "fill-extrusion-height":["coalesce", ["get","render_height"], 8],
+             "fill-extrusion-base":["coalesce", ["get","render_min_height"], 0], "fill-extrusion-opacity":.85}}, firstSymbol);
+  }catch(e){ console.warn("3D buildings:", e); }
+  addTerrain(firstLine, dark);
+  m.addSource("atlas", {type:"geojson", data:geo3d()});
+  const dimK = v => ["case", ["get","dim"], v * .3, v];
+  m.addLayer({id:"atlas-halo", type:"circle", source:"atlas", filter:["==", ["get","approx"], true],
+    paint:{"circle-radius":["interpolate", ["linear"], ["zoom"], 7, 9, 12, 20, 15, 46], "circle-color":["get","catColor"],
+      "circle-opacity":["*", ["get","opacity"], dimK(.22)], "circle-blur":.5, "circle-pitch-alignment":"map",
+      "circle-stroke-width":1.3, "circle-stroke-color":["get","catColor"], "circle-stroke-opacity":["*", ["get","opacity"], dimK(.75)]}});
+  m.addLayer({id:"atlas-dot", type:"circle", source:"atlas",
+    paint:{"circle-radius":["case", ["get","approx"], 3.5, ["interpolate", ["linear"], ["zoom"], 7, 4, 13, 7]], "circle-color":["get","catColor"],
+      "circle-opacity":["*", ["get","opacity"], dimK(1)], "circle-stroke-width":1.5, "circle-stroke-color":"#ffffff",
+      "circle-stroke-opacity":dimK(.8)}});
+  m.addLayer({id:"atlas-new", type:"circle", source:"atlas", filter:["==", ["get","isNew"], true],
+    paint:{"circle-radius":["interpolate", ["linear"], ["zoom"], 7, 8, 13, 11], "circle-opacity":0,
+      "circle-stroke-width":2.5, "circle-stroke-color":"#ffc600", "circle-stroke-opacity":dimK(1)}});
+  m.addLayer({id:"atlas-sel", type:"circle", source:"atlas", filter:["==", ["get","sel"], true],
+    paint:{"circle-radius":15, "circle-opacity":0, "circle-stroke-width":3, "circle-stroke-color":dark ? "#ffffff" : "#111827"}});
+  hover3d = new maplibregl.Popup({closeButton:false, closeOnClick:false, offset:12});
+  ["atlas-dot", "atlas-halo"].forEach(id => {
+    m.on("click", id, e => { const f = e.features && e.features[0]; if(f){ lensSelect(f.properties.id); openDrawer(f.properties.id); } });
+    m.on("mousemove", id, e => {
+      const f = e.features && e.features[0]; if(!f || !hover3d) return;
+      m.getCanvas().style.cursor = "pointer";
+      const d = byId[f.properties.id], t = trustOf(d);
+      hover3d.setLngLat([d.lng, d.lat]).setHTML(`<b>${esc(d.name)}</b><br><small>${esc(t.verified)}${d.approx ? " · neighborhood-level location" : ""}${t.isNew ? " · NEW" : ""}</small>`).addTo(m);
+    });
+    m.on("mouseleave", id, () => { m.getCanvas().style.cursor = ""; if(hover3d) hover3d.remove(); });
+  });
+  m.on("moveend", ecoRefreshSoon);
+  arcs3d();
+  if(LS.selected) lens3dSelect(LS.selected);
+  ecoRefresh();
+}
+async function addTerrain(beforeId, dark){
+  const m = map3d;
+  try{
+    // verify the keyless tiles answer before relying on them; carry on flat if not
+    if(terrainOK === null){
+      const r = await fetch(TERRAIN_TILES.replace("{z}/{x}/{y}", "8/77/94"), {mode:"cors"});
+      terrainOK = r.ok;
+    }
+    if(!terrainOK) throw new Error("terrain tiles unavailable");
+    if(m !== map3d) return;
+    const src = {type:"raster-dem", tiles:[TERRAIN_TILES], encoding:"terrarium", tileSize:256, maxzoom:15,
+      attribution:'Terrain: <a href="https://registry.opendata.aws/terrain-tiles/">AWS Open Data Terrain Tiles</a>'};
+    m.addSource("terrain", src);
+    m.addSource("terrain-hs", {...src, attribution:undefined});
+    m.addLayer({id:"lens-hillshade", type:"hillshade", source:"terrain-hs",
+      paint:{"hillshade-exaggeration":.35, "hillshade-shadow-color": dark ? "#02040c" : "#6b7280"}}, beforeId);
+    m.setTerrain({source:"terrain", exaggeration:1.4});
+    try{ m.setSky(dark ? {"sky-color":"#0b1226", "horizon-color":"#1d2846", "fog-color":"#0a0f1e", "sky-horizon-blend":.5, "horizon-fog-blend":.6, "fog-ground-blend":.4}
+                       : {"sky-color":"#9cc7f2", "horizon-color":"#e6eef8", "fog-color":"#ffffff", "sky-horizon-blend":.5, "horizon-fog-blend":.6, "fog-ground-blend":.4}); }catch(e){}
+  }catch(e){
+    terrainOK = false;
+    note3d("Terrain tiles didn't load, so 3D is flat this time. Buildings, pins and connections still work.");
+  }
+}
+function loadDeck(){
+  if(window.deck && window.deck.MapboxOverlay) return Promise.resolve(window.deck);
+  if(!deckLoading) deckLoading = new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = DECK_URL; s.async = true; s.crossOrigin = "anonymous";
+    s.onload = () => window.deck && window.deck.MapboxOverlay ? res(window.deck) : rej(new Error("deck.gl missing"));
+    s.onerror = () => rej(new Error("deck.gl failed to load"));
+    document.head.appendChild(s);
+  });
+  return deckLoading;
+}
+const hexRgb = h => [1, 3, 5].map(i => parseInt(h.substr(i, 2), 16));
+function arcData3d(){
+  const lens = LENSES[LS.lens], seen = new Set(), out = [];
+  const add = (a, b, sel) => {
+    const k = a < b ? a + "|" + b : b + "|" + a; if(seen.has(k)) return; seen.add(k);
+    const type = linkTypeOf(a, b), A = byId[a], B = byId[b];
+    out.push({a, b, type, sel, from:[A.lng, A.lat], to:[B.lng, B.lat], color:hexRgb(LINK_TYPES[type].color)});
+  };
+  if(LS.selected) ADJ.get(LS.selected).forEach(x => add(LS.selected, x, true));
+  if(LS.network) EDGES.forEach(([a, b]) => { if(LS.lens === "all" || lens.links.includes(linkTypeOf(a, b))) add(a, b, false); });
+  return out;
+}
+function arcs3d(){
+  if(!map3d) return;
+  const data = arcData3d();
+  loadDeck().then(deck => {
+    if(!map3d) return;
+    const layer = new deck.ArcLayer({id:"lens-arcs", data, pickable:true, greatCircle:false,
+      getSourcePosition:d => d.from, getTargetPosition:d => d.to,
+      getSourceColor:d => [...d.color, d.sel ? 245 : 140], getTargetColor:d => [...d.color, d.sel ? 245 : 140],
+      getWidth:d => d.sel ? 3.5 : 1.4, getHeight:.6});
+    if(!deckOverlay){
+      deckOverlay = new deck.MapboxOverlay({interleaved:false, layers:[layer],
+        getTooltip:({object}) => object && {html:arcTooltip(object.a, object.b, object.type),
+          style:{background:"rgba(10,15,30,.95)", color:"#ececf1", fontSize:"12px", maxWidth:"280px", borderRadius:"8px"}}});
+      map3d.addControl(deckOverlay);
+    } else deckOverlay.setProps({layers:[layer]});
+  }).catch(e => { console.warn(e); arcsFallback3d(data); });
+}
+// no deck.gl: the same curves as flat MapLibre lines, one layer per type for its dash pattern
+function arcsFallback3d(data){
+  const m = map3d; if(!m || !m.isStyleLoaded()) return;
+  const fc = {type:"FeatureCollection", features:data.map(d => ({type:"Feature", properties:{type:d.type, sel:!!d.sel},
+    geometry:{type:"LineString", coordinates:bezier([d.from[1], d.from[0]], [d.to[1], d.to[0]]).map(([y, x]) => [x, y])}}))};
+  if(m.getSource("arcs-fb")) return m.getSource("arcs-fb").setData(fc);
+  m.addSource("arcs-fb", {type:"geojson", data:fc});
+  LINK_ORDER.forEach(k => { const T = LINK_TYPES[k], paint = {"line-color":T.color, "line-width":["case", ["get","sel"], 3, 1.3], "line-opacity":["case", ["get","sel"], .95, .5]};
+    if(T.dash) paint["line-dasharray"] = T.dash.split(" ").map(v => +v / 3);
+    m.addLayer({id:"arcs-fb-" + k, type:"line", source:"arcs-fb", filter:["==", ["get","type"], k], layout:{"line-cap":"round"}, paint}); });
+}
+function refresh3d(){
+  if(!map3d || !map3d.getSource || !map3d.getSource("atlas")) return;
+  map3d.getSource("atlas").setData(geo3d());
+  arcs3d(); renderRegions();
+}
+function lens3dSelect(id){
+  if(!map3d) return;
+  refresh3d();
+  if(!id) return;
+  const d = byId[id], pts = [d, ...[...ADJ.get(id)].map(x => byId[x])];
+  const lng = pts.map(p => p.lng), lat = pts.map(p => p.lat);
+  try{
+    const opts = {padding:{top:80, bottom:60, left:250, right:innerWidth > 720 ? 380 : 40}, maxZoom:13.5, pitch:55, bearing:-15};
+    if(reduceMotion()) map3d.fitBounds([[Math.min(...lng), Math.min(...lat)], [Math.max(...lng), Math.max(...lat)]], {...opts, animate:false});
+    else map3d.fitBounds([[Math.min(...lng), Math.min(...lat)], [Math.max(...lng), Math.max(...lat)]], {...opts, duration:1800});
+  }catch(e){}
+}
+window.lens3dSelect = lens3dSelect;
+// region chapters: click, or ↑/↓ inside the list; no auto-rotation or drift, ever
+function chapterCount(ch){
+  const lens = LENSES[LS.lens];
+  const pool = DATA.filter(d => LS.lens === "all" || lensRelevance(d, lens).s > 0);
+  return ch.region ? pool.filter(d => REGION_OF.get(d.id) === ch.region).length
+                   : pool.filter(d => metresBetween(d.lat, d.lng, ch.c[0], ch.c[1]) <= ch.r * 1000).length;
+}
+function renderRegions(){
+  const nav = $("regions3d"); if(!nav) return;
+  const cur = CHAPTERS[chapterIdx];
+  nav.innerHTML = `<h2>Region chapters · ↑/↓</h2>` + CHAPTERS.map((ch, i) =>
+    `<button type="button" class="rg-btn" data-i="${i}" aria-current="${i === chapterIdx}"><span>${esc(ch.name)}</span><span class="v">${chapterCount(ch)}</span></button>`).join("") +
+    (cur && !chapterCount(cur) ? `<p class="rg-gap">No Atlas entries in ${esc(cur.name)} yet${LS.lens !== "all" ? " for this lens" : ""}. ` +
+      `This is a gap in the map, not proof there's no AI here. <button type="button" class="lp-act" onclick="suggestEntry()">➕ Suggest an entry</button></p>` : "");
+}
+function fly3d(ch){
+  if(!map3d) return;
+  const o = {center:[ch.c[1], ch.c[0]], zoom:ch.z, pitch:55, bearing:-15};
+  reduceMotion() ? map3d.jumpTo(o) : map3d.flyTo({...o, duration:2200});
+}
+function goChapter(i){
+  chapterIdx = (i + CHAPTERS.length) % CHAPTERS.length;
+  fly3d(CHAPTERS[chapterIdx]); renderRegions();
+  const b = $("regions3d").querySelector(`.rg-btn[data-i="${chapterIdx}"]`); if(b) b.focus();
+}
+$("regions3d").addEventListener("click", e => { const b = e.target.closest(".rg-btn"); if(b) goChapter(+b.dataset.i); });
+$("regions3d").addEventListener("keydown", e => {
+  if(e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+  e.preventDefault(); goChapter(chapterIdx + (e.key === "ArrowDown" ? 1 : -1));
+});
+$("mode3d").addEventListener("click", () => map3d ? exit3d() : enter3d());
 
 /* ---------- structured data (SEO) ---------- */
 (function jsonLd(){
