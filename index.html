@@ -1653,7 +1653,7 @@ function gxStep(){
 }
 
 function gxDraw(t){
-  const ctx = gxCtx;
+  const ctx = gxCtx, hubLabels = [];
   ctx.setTransform(gxDPR,0,0,gxDPR,0,0);
   ctx.clearRect(0,0,gxW,gxH);
   // stars
@@ -1703,11 +1703,7 @@ function gxDraw(t){
     ctx.globalAlpha = inFocus ? 1 : 0.15; ctx.fillStyle = col;
     ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2); ctx.fill();
     if(n.hub){
-      ctx.globalAlpha = inFocus ? 1 : 0.25;
-      ctx.fillStyle="rgba(230,236,255,.92)";
-      ctx.font = `700 ${13/gxScale}px Red Hat Display, Segoe UI, sans-serif`;
-      ctx.textAlign="center";
-      ctx.fillText(n.name, n.x, n.y - (r+10)/1);
+      hubLabels.push({n, r, inFocus});   // drawn after every node, below
     } else if(hl || (focus ? inFocus : gxScale>1.35)){
       ctx.globalAlpha = 1;
       ctx.fillStyle = hl ? "#fff" : "rgba(200,212,255,.8)";
@@ -1717,6 +1713,21 @@ function gxDraw(t){
     }
     ctx.globalAlpha = 1;
   });
+  // Category labels last, on top of the nodes, each nudged up until it clears the
+  // ones already placed: the hubs drift together and their names used to overprint.
+  const placed = [], lh = 16/gxScale;
+  ctx.font = `700 ${13/gxScale}px Red Hat Display, Segoe UI, sans-serif`;
+  ctx.textAlign = "center";
+  hubLabels.forEach(({n, r, inFocus})=>{
+    const w = ctx.measureText(n.name).width + 8/gxScale;
+    let y = n.y - (r+10);
+    for(let k = 0; k < 12 && placed.some(p => Math.abs(p.x - n.x) < (p.w + w)/2 && Math.abs(p.y - y) < lh); k++) y -= lh;
+    placed.push({x:n.x, y, w});
+    ctx.globalAlpha = inFocus ? 1 : 0.25;
+    ctx.lineWidth = 4/gxScale; ctx.strokeStyle = "rgba(7,11,22,.85)"; ctx.strokeText(n.name, n.x, y);
+    ctx.fillStyle = "rgba(230,236,255,.92)"; ctx.fillText(n.name, n.x, y);
+  });
+  ctx.globalAlpha = 1;
   ctx.restore();
 }
 
