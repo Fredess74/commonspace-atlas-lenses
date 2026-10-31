@@ -339,6 +339,12 @@ html:not(.dark) .cluster-donut.mostly-approx span{outline-color:rgba(21,23,31,.7
 .sig-missing{color:#fca5a5;border:1px dashed rgba(252,165,165,.6);font-style:italic}
 .sig-new{color:#ffd54f;border-color:#ffc600;font-weight:700}
 .sig-na{color:var(--muted)}
+.sig-cred{color:var(--text);border-color:var(--tc);font-weight:600}
+.sig-cred b{font-variant-numeric:tabular-nums}
+.cred-dot{width:9px;height:9px;border-radius:50%;background:var(--tc);flex:none}
+.cred-why{font-size:12.5px!important;color:var(--muted)!important;margin:-6px 0 14px!important;line-height:1.5!important}
+.cred-why b{color:var(--text)}
+.cred-why a{color:var(--gold-ink)}
 .sig-strip.compact{margin:6px 0 8px;gap:4px}
 .sig-strip.compact .sig{font-size:11.5px;padding:3px 7px}
 html:not(.dark) .sig-warn{color:#9a4508;border-color:rgba(154,69,8,.45)}
@@ -364,6 +370,7 @@ html:not(.dark) .lens-panel{background:rgba(255,255,255,.97)}
 .lp-main{appearance:none;background:none;border:0;color:inherit;font:inherit;text-align:left;width:100%;cursor:pointer;display:flex;gap:7px;align-items:baseline;padding:2px 0;min-height:32px}
 .lp-rank{font-variant-numeric:tabular-nums;font-size:11.5px;color:var(--muted);min-width:18px}
 .lp-name{font-weight:700;font-size:15px}
+.lp-cred{font:700 12px/1 ui-monospace,Consolas,monospace;padding:3px 6px;border-radius:6px;border:1.5px solid var(--tc);color:var(--text);margin-left:6px;flex:none}
 .lp-dist{margin-left:auto;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .lp-cat{font-size:11.5px;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-left:25px}
 .lp-why{font-size:13px;color:var(--muted);line-height:1.45;margin:3px 0 0 25px}
@@ -682,7 +689,7 @@ browse the <a href="e/">full organization index</a> or use the open dataset
     <button class="tab" data-view="galaxy"><span class="ico">✨</span>Galaxy</button>
     <button class="tab" data-view="journey"><span class="ico">🧭</span>Founder Journey</button>
     <button class="tab" data-view="directory"><span class="ico">📇</span>Directory</button>
-    <a class="tab" href="atlas3d.html" style="text-decoration:none" title="Tilt the map, see how sure we are about each pin, and trace connections"><span class="ico">🏙️</span>3D Lenses</a>
+    <button class="tab" type="button" onclick="switchView('map');setTimeout(()=>{ if(!map3d) enter3d(); },150)" title="Tilt the map, see how sure we are about each pin, and trace connections"><span class="ico">🏙️</span>3D</button>
     <div class="nav-spacer"></div>
     <button class="tab" id="starNav" style="display:none" title="Your saved shortlist" onclick="openShortlist()">★ <span id="starCount">0</span></button>
     <button class="tab suggest" id="suggestBtn" title="Propose a new organization for the atlas">➕ Suggest an entry</button>
@@ -1147,8 +1154,35 @@ function signalsOf(d, asOf = ASOF){
     level: dl.kind === "passed" ? "warn" : dl.kind === "none" ? "na" : "ok"});
   return out;
 }
+// Credibility: one score per entry, starting at 100 and losing points for each doubt
+// signal, with every deduction listed as a reason. Ported from the team's 3D Lenses
+// page so both views share one formula. Stage counts only for startups, so a
+// confident lab or fund is never marked down for a field that doesn't apply.
+const CRED_TIER = { hi:{label:"High", color:"#4ade80"}, mid:{label:"Medium", color:"#fbbf24"}, lo:{label:"Low", color:"#f87171"} };
+const STACKED = DATA.reduce((m, d) => { const k = d.lat + "," + d.lng; (m[k] = m[k] || []).push(d); return m; }, {});
+function credibilityOf(d, asOf = ASOF){
+  const t = trustOf(d, asOf), out = [], add = (pts, label) => out.push({pts, label});
+  if(t.months === null) add(-25, "never verified");
+  else if(t.months >= 4) add(-15, `verified ${t.ago}`);
+  else if(t.months >= 2) add(-5, `verified ${t.ago}`);
+  if(d.approx) add(-20, "approximate location");
+  if(STACKED[d.lat + "," + d.lng].length > 1) add(-5, "shares a pin with another entry");
+  if(d.cat === "startup" && !(d.stages || []).length) add(-10, "startup without a stage");
+  if(!degreeOf(d.id)) add(-10, "no connections recorded");
+  if(isFunder(d) && !checkSizeOf(d)) add(-10, "funder without a check size");
+  if(d.applyBy === "rolling") add(-5, "deadline only \u201crolling\u201d");
+  if(typeof eventHosts === "object" && eventHosts[d.id]) add(+5, "hosting an event this week");
+  const score = Math.max(0, Math.min(100, 100 + out.reduce((a, x) => a + x.pts, 0)));
+  return { score, tier: score >= 80 ? "hi" : score >= 60 ? "mid" : "lo", reasons: out };
+}
+function credBadgeHTML(d){
+  const c = credibilityOf(d), T = CRED_TIER[c.tier];
+  const lost = c.reasons.filter(r => r.pts < 0).map(r => r.label);
+  return `<li class="sig sig-cred" data-sig="cred" style="--tc:${T.color}" title="${esc(lost.length ? "Lost points for: " + lost.join(", ") : "No doubt signals")}">` +
+    `<span class="cred-dot" aria-hidden="true"></span>Credibility <b>${c.score}</b> · ${T.label}</li>`;
+}
 function signalStripHTML(d, compact){
-  return `<ul class="sig-strip${compact ? " compact" : ""}" aria-label="Trust signals for ${esc(d.name)}">` +
+  return `<ul class="sig-strip${compact ? " compact" : ""}" aria-label="Trust signals for ${esc(d.name)}">` + credBadgeHTML(d) +
     signalsOf(d).map(s => `<li class="sig sig-${s.level}" data-sig="${s.k}"><span aria-hidden="true">${s.icon}</span>${esc(s.text)}</li>`).join("") +
     `</ul>`;
 }
@@ -1178,7 +1212,7 @@ function clusterIcon(c){
   return L.divIcon({className:"", iconSize:[36,36], iconAnchor:[18,18],
     html:`<div class="${cls}" style="background:conic-gradient(${segs.join(",") || "#ff5c45 0deg 360deg"})" title="${label}"><span>${n}</span></div>`});
 }
-Object.assign(window, { trustOf, signalsOf, linkTypeOf, deadlineOf, checkSizeOf, ADJ, EDGES, ASOF });
+Object.assign(window, { credibilityOf, trustOf, signalsOf, linkTypeOf, deadlineOf, checkSizeOf, ADJ, EDGES, ASOF });
 
 /* ---------- detail drawer ---------- */
 /* ---------- places to meet ----------
@@ -1283,7 +1317,11 @@ function openDrawer(id){
   $("drName").textContent = d.name;
   $("drLoc").textContent = "📍 " + d.loc + (d.approx ? " (approx.)" : "");
   // Atlas Lenses: the six signals come first, before anything that invites action
-  let html = signalStripHTML(d) + `<p>${esc(d.desc)}</p>`;
+  const cred = credibilityOf(d);
+  let html = signalStripHTML(d) +
+    `<p class="cred-why"><b>Why ${cred.score}:</b> ${cred.reasons.length ? esc(cred.reasons.map(r => `${r.label} (${r.pts > 0 ? "+" : ""}${r.pts})`).join(" · ")) : "no doubt signals, so it keeps all 100"}. ` +
+    `Source: <a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))} ↗</a></p>` +
+    `<p>${esc(d.desc)}</p>`;
   if(d.why) html += `<div class="dr-why" style="--cc:${col}"><b>Why it matters for founders</b><div>${esc(d.why)}</div></div>`;
   if(applyOpen(d)) html += `<div class="dr-apply">⏳ Applications open — ${d.applyBy==="rolling" ? "rolling" : "apply by " + fmtDeadline(d.applyBy)}${d.applyNote ? " · " + esc(d.applyNote) : ""}</div>`;
   if(eventHosts[d.id]) html += `<div class="dr-apply dr-event">🎟 Hosting: ${esc(eventHosts[d.id].title)} — <a href="events/" target="_blank" rel="noopener">all events</a></div>`;
@@ -2228,14 +2266,12 @@ const fmtKm = km => km < 10 ? km.toFixed(1) + " km" : Math.round(km) + " km";
 
 // Maintainer: a sum of flags, each one shown as a reason
 function reviewOf(d){
-  const t = trustOf(d), why = [];
-  if(t.isNew) why.push("new this month");
-  if(d.approx) why.push("approximate pin");
-  if(!degreeOf(d.id)) why.push("no connections");
-  if(d.cat === "startup" && !(d.stages||[]).length) why.push("startup without a stage");
-  if(isFunder(d) && !checkSizeOf(d)) why.push("funder without a check size");
-  if(t.months !== null && t.months >= 4) why.push(`verified ${t.ago}`);
-  return {s: why.length, why: why.length ? ["Review flags: " + why.join(" · ")] : []};
+  const c = credibilityOf(d), isNewEntry = trustOf(d).isNew;
+  const why = c.reasons.filter(r => r.pts < 0).map(r => r.label);
+  if(isNewEntry) why.unshift("new this month");
+  // lowest credibility first; new entries rise, since nobody has re-checked them yet
+  const s = (100 - c.score) / 10 + (isNewEntry ? 2 : 0);
+  return {s, why: why.length ? [`Credibility ${c.score}. Re-check: ` + why.join(" · ")] : []};
 }
 function lensRelevance(d, lens){
   if(lens.review) return reviewOf(d);
@@ -2256,7 +2292,7 @@ function rankLens(lensKey, near, r){
     if(rel.s <= 0) continue;
     const t = trustOf(d), deg = degreeOf(d.id), km = near ? kmOf(near, d) : null;
     const prox = km === null ? 0 : Math.max(0, 1 - km / r);
-    const trust = t.opacity - (t.approx ? .15 : 0);
+    const trust = credibilityOf(d).score / 100;
     const score = w.lens * rel.s + w.near * prox * 2 + w.trust * trust + w.conn * Math.min(deg, 6) / 6;
     const why = [...rel.why];
     if(km !== null) why.push(`${fmtKm(km)} from ${near.name}`);
@@ -2382,6 +2418,7 @@ function renderResults(rows){
     return `<li class="lp-item${LS.selected === id ? " sel" : ""}" data-id="${id}">` +
       `<button type="button" class="lp-main" data-id="${id}" aria-describedby="lpw-${id}">` +
         `<span class="lp-rank">${i + 1}</span><span class="lp-name">${esc(d.name)}</span>` +
+        `<span class="lp-cred" style="--tc:${CRED_TIER[credibilityOf(d).tier].color}" title="Credibility score">${credibilityOf(d).score}</span>` +
         (r.km !== null ? `<span class="lp-dist">${fmtKm(r.km)}</span>` : "") + `</button>` +
       `<div class="lp-cat" style="color:${cInk(d.cat)}">${cLabel(d.cat)}</div>` +
       `<div class="lp-why" id="lpw-${id}"><b>Why ranked:</b> ${esc(r.why.join(" · "))}</div>` +
@@ -2624,6 +2661,9 @@ const DRILLS = {
   nolinks: {label:"No connections recorded",       test:d => !degreeOf(d.id)},
   nostage: {label:"Startups with no stage",        test:d => d.cat === "startup" && !(d.stages||[]).length},
   nocheck: {label:"Funders with no check size",    test:d => isFunder(d) && !checkSizeOf(d)},
+  credhi:  {label:"High credibility (80+)",        test:d => credibilityOf(d).tier === "hi"},
+  credmid: {label:"Medium credibility (60-79)",    test:d => credibilityOf(d).tier === "mid"},
+  credlo:  {label:"Low credibility (under 60)",    test:d => credibilityOf(d).tier === "lo"},
 };
 REGIONS.forEach(r => DRILLS["region-" + r.key] = {label:r.name, test:d => REGION_OF.get(d.id) === r.key, region:r});
 function setDrill(key){
@@ -2656,6 +2696,7 @@ function ecoRefresh(){
   const all = DATA.filter(inLens);
   box.innerHTML =
     row("", "Organizations in view", base.length) +
+    row("credhi", "High credibility (80+)", n("credhi")) + row("credmid", "Medium credibility (60-79)", n("credmid")) + row("credlo", "Low credibility (under 60)", n("credlo")) +
     row("fresh", "Verified in the last 2 months", pct("fresh")) +
     row("stale", "Verified 4+ months ago", n("stale")) +
     row("approx", "Approximate pins", `${pct("approx")} · ${n("approx")}`) +
@@ -2800,7 +2841,7 @@ function setup3d(){
       const f = e.features && e.features[0]; if(!f || !hover3d) return;
       m.getCanvas().style.cursor = "pointer";
       const d = byId[f.properties.id], t = trustOf(d);
-      hover3d.setLngLat([d.lng, d.lat]).setHTML(`<b>${esc(d.name)}</b><br><small>${esc(t.verified)}${d.approx ? " · neighborhood-level location" : ""}${t.isNew ? " · NEW" : ""}</small>`).addTo(m);
+      hover3d.setLngLat([d.lng, d.lat]).setHTML(`<b>${esc(d.name)}</b><br><small>Credibility ${credibilityOf(d).score} · ${esc(t.verified)}${d.approx ? " · neighborhood-level location" : ""}${t.isNew ? " · NEW" : ""}</small>`).addTo(m);
     });
     m.on("mouseleave", id, () => { m.getCanvas().style.cursor = ""; if(hover3d) hover3d.remove(); });
   });

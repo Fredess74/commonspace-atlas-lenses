@@ -170,3 +170,13 @@ test("compare answers 'which do you trust less?' with counted doubts and their r
   await expect(doubts).toContainText("Neighborhood-level location");
   await expect(page.locator("#cmpBody tr", { hasText: "Source" }).locator("a").first()).toHaveAttribute("href", /^https?:\/\//);
 });
+
+test("one credibility score, explained point by point, with the source beside it", async ({ page }) => {
+  await page.goto("./?entry=venture-guides&asof=2026-10");
+  await expect(page.locator("#drawer")).toHaveClass(/\bopen\b/);
+  const c = await page.evaluate(() => credibilityOf(byId["venture-guides"], "2026-10"));
+  expect(c.score).toBe(100 + c.reasons.reduce((a, r) => a + r.pts, 0));
+  await expect(page.locator('#drBody .sig[data-sig="cred"]')).toContainText(`Credibility ${c.score}`);
+  await expect(page.locator("#drBody .cred-why")).toContainText(`Why ${c.score}:`);
+  await expect(page.locator("#drBody .cred-why a")).toHaveAttribute("href", /^https?:\/\//);
+});

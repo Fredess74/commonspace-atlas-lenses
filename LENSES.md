@@ -45,6 +45,14 @@ original behaviour unchanged.
      zoom in.
    - A gold ring marks entries added this month.
    - Opacity never stands alone: each pin carries "Verified Jun 2026 · 4 months ago" in words.
+4b. **One credibility score (0–100), explained.** Merged from our teammate's 3D Lenses work
+   (`egornikot/mass-ai-atlas`) so the whole app uses one formula. Every entry starts at 100 and
+   loses points for each doubt signal: verification age, approximate pin, shared coordinates,
+   startup without a stage, no connections, funder without a check size, rolling-only deadline.
+   Hosting an event this week adds a little back. The drawer prints the arithmetic ("Why 75:
+   verified 2 months ago (−5) · no connections (−10) · funder without a check size (−10)") next
+   to the source link. Tiers are High (80+), Medium (60–79) and Low (under 60). The score feeds
+   ranking, the Maintainer lens (lowest first) and the ecosystem panel.
 5. **The six-signal strip** appears in every popup and at the top of every drawer, above the action
    buttons. It shows: location precision · verified month · stage · connection count · check size
    (funders) · deadline. A missing value renders as a dashed *"not stated"* badge and is never
