@@ -13,9 +13,9 @@ const { DATA, CATS } = loadData();
 
 const asOf = process.argv[2] || new Date().toISOString().slice(0, 7);
 const mIdx = ym => { const [y, m] = ym.split("-"); return +y * 12 + +m; };
-const FUNDER = new Set(["vc", "angel"]);
-// a funder states a check size when a fact label says so
-const CHECK_RE = /check|ticket|investment size|cheque/i;
+// same rules as isFunder()/checkSizeOf() in index.html
+const isFunder = d => d.cat === "vc" || d.cat === "angel" || (d.offers || []).includes("funding");
+const CHECK_RE = /check|cheque|ticket/i;
 const hasCheck = d => (d.facts || []).some(f => CHECK_RE.test(f[0]));
 
 const deg = new Map(DATA.map(d => [d.id, new Set()]));
@@ -25,7 +25,7 @@ for (const d of DATA) for (const t of d.links || []) {
   deg.get(d.id).add(t); deg.get(t).add(d.id); edges++;
 }
 const hist = key => DATA.reduce((h, d) => (h[d[key] || "none"] = (h[d[key] || "none"] || 0) + 1, h), {});
-const funders = DATA.filter(d => FUNDER.has(d.cat));
+const funders = DATA.filter(isFunder);
 const ageOf = d => d.lastVerified ? mIdx(asOf) - mIdx(d.lastVerified) : null;
 
 const rows = [
@@ -35,7 +35,7 @@ const rows = [
   ["entries with no connections (in or out)", DATA.filter(d => deg.get(d.id).size === 0).length],
   ["undirected edges", edges],
   ["startups with no stage", DATA.filter(d => d.cat === "startup" && !(d.stages || []).length).length],
-  ["funders (vc + angel)", funders.length],
+  ["funders (vc, angel, or offers funding)", funders.length],
   ["funders with no stated check size", funders.filter(d => !hasCheck(d)).length],
   ["funders with a deadline (applyBy)", funders.filter(d => d.applyBy).length],
   ["entries with applyBy rolling", DATA.filter(d => d.applyBy === "rolling").length],

@@ -383,7 +383,9 @@ a.chip{color:inherit;text-decoration:none}
 /* legend: collapsible, and it explains the encodings, not only the colours */
 .lg-toggle{appearance:none;display:flex;width:100%;gap:6px;align-items:center;background:none;border:0;color:var(--text);font:700 11px/1 inherit;font-family:inherit;
   text-transform:uppercase;letter-spacing:1.3px;cursor:pointer;padding:6px 2px;min-height:32px}
-.map-legend{max-height:calc(100% - 90px);overflow-y:auto}
+.map-legend{max-height:46%;overflow-y:auto}
+.map-wrap.is3d .map-legend{max-height:36%}
+.regions3d{max-height:54%;overflow-y:auto}
 .map-legend.collapsed > :not(.lg-toggle){display:none}
 .lg-extra{margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
 .lg-extra b{color:var(--text);font-size:10.5px;text-transform:uppercase;letter-spacing:1.2px}
@@ -428,6 +430,15 @@ html:not(.dark) .map3d-note{background:#fff}
   .regions3d{width:auto;right:8px;left:8px;max-height:34%;overflow-y:auto}
 }
 @media(max-width:720px){
+  /* phone: the tab bar and each lens group become one swipeable row, so the
+     map is on the first screen instead of below three rows of chrome */
+  .nav-inner{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .nav-inner > *{flex:none}
+  .lens-bar{flex-direction:column;align-items:stretch;flex-wrap:nowrap;gap:6px}
+  .lens-chips,.lens-near{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .lens-chips > *,.lens-near > *{flex:none}
+  .lens-label{display:none}
+  .lens-q{font-size:12.5px}
   .lens-bar{padding:8px 12px}
   .lens-panel{top:auto;left:0;right:0;bottom:0;width:auto;max-height:46%;border-radius:14px 14px 0 0}
   .lens-panel.min{max-height:56px}
