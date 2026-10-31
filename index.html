@@ -324,6 +324,13 @@ html:not(.dark) .tour-card{background:#fff;border-color:#ddd;box-shadow:0 12px 4
 .lens-pin.is-new::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 0 0 2px #ffc600,0 0 12px rgba(255,198,0,.8)}
 .lens-pin.dim{opacity:.22;filter:grayscale(.85);transform:scale(.72)}
 .lens-pin.sel{transform:scale(1.35)}
+.cluster-donut{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px rgba(0,0,0,.5);transition:opacity .2s}
+.cluster-donut span{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:rgba(14,17,26,.96);color:#fff;font:700 12.5px/1 'Red Hat Display',sans-serif}
+.cluster-donut.mostly-approx span{outline:1.5px dashed rgba(255,255,255,.8);outline-offset:-4px}
+.cluster-donut.dim{opacity:.3;filter:grayscale(.8)}
+html:not(.dark) .cluster-donut span{background:#fff;color:#15171f}
+html:not(.dark) .cluster-donut.mostly-approx span{outline-color:rgba(21,23,31,.7)}
 /* the six signals */
 .sig-strip{list-style:none;display:flex;flex-wrap:wrap;gap:5px;margin:0 0 14px;padding:0}
 .sig{display:inline-flex;gap:5px;align-items:center;font-size:11.5px;line-height:1.25;padding:4px 8px;border-radius:8px;border:1px solid var(--line);color:var(--muted);background:var(--panel2)}
@@ -1146,6 +1153,22 @@ function pinIcon(d, opts = {}){
   return L.divIcon({className:"", html:`<div class="${cls}" style="--pc:${cColor(d.cat)};--po:${t.opacity}">${inner}</div>`,
     iconSize:[size,size], iconAnchor:[size/2,size/2]});
 }
+// clusters: a donut of the category mix instead of a uniform red circle; a dashed
+// centre when most pins inside are approximate; dimmed like pins outside the lens
+const LENS_DIM = { on:false, keep:new Set() };
+function clusterIcon(c){
+  const ids = c.getAllChildMarkers().map(m => m.options.atlasId).filter(id => byId[id]);
+  const n = ids.length || c.getChildCount(), counts = {};
+  let approx = 0, fresh = 0, kept = 0;
+  ids.forEach(id => { const d = byId[id]; counts[d.cat] = (counts[d.cat] || 0) + 1;
+    if(d.approx) approx++; if(trustOf(d).isNew) fresh++; if(LENS_DIM.keep.has(id)) kept++; });
+  let acc = 0;
+  const segs = Object.keys(CATS).filter(k => counts[k]).map(k => `${cColor(k)} ${acc / n * 360}deg ${(acc += counts[k]) / n * 360}deg`);
+  const cls = "cluster-donut" + (approx * 2 > n ? " mostly-approx" : "") + (LENS_DIM.on && !kept ? " dim" : "");
+  const label = `${n} organizations: ${approx} approximate, ${fresh} new this month`;
+  return L.divIcon({className:"", iconSize:[36,36], iconAnchor:[18,18],
+    html:`<div class="${cls}" style="background:conic-gradient(${segs.join(",") || "#ff5c45 0deg 360deg"})" title="${label}"><span>${n}</span></div>`});
+}
 Object.assign(window, { trustOf, signalsOf, linkTypeOf, deadlineOf, checkSizeOf, ADJ, EDGES, ASOF });
 
 /* ---------- detail drawer ---------- */
@@ -1434,9 +1457,7 @@ function setMapTiles(){ if(!map) return; if(mapTiles) map.removeLayer(mapTiles);
   clusterGroup = L.markerClusterGroup({
     showCoverageOnHover:false, maxClusterRadius:46, disableClusteringAtZoom:15,
     spiderfyOnMaxZoom:false,
-    iconCreateFunction: c => L.divIcon({className:"",
-      html:`<div class="cluster-chip">${c.getChildCount()}</div>`,
-      iconSize:[34,34], iconAnchor:[17,17]})
+    iconCreateFunction: clusterIcon   // Atlas Lenses: category-mix donut
   });
   flatGroup = L.layerGroup();
   const pinGroup = () => clustered ? clusterGroup : flatGroup;
@@ -1472,7 +1493,7 @@ function setMapTiles(){ if(!map) return; if(mapTiles) map.removeLayer(mapTiles);
 
   DATA.forEach(d=>{
     // Atlas Lenses: the pin carries trust (see pinIcon), the popup the six signals
-    const m = L.marker([d.lat,d.lng], {icon:pinIcon(d), title:d.name});
+    const m = L.marker([d.lat,d.lng], {icon:pinIcon(d), title:d.name, atlasId:d.id});
     m.bindPopup(
       `<div class="pop-name">${esc(d.name)}</div>`+
       `<div class="pop-cat" style="color:${cInk(d.cat)}">${cLabel(d.cat)}</div>`+
@@ -2279,8 +2300,10 @@ function lensRefresh(opts = {}){
   LS.results = rows;
   const keep = new Set(rows.filter(r => r.inRadius).map(r => r.d.id));
   LS.keep = keep; LS.filtering = filtering;
+  LENS_DIM.on = filtering; LENS_DIM.keep = keep;
   // pins: dim what the lens doesn't emphasise, never hide it
   DATA.forEach(d => { const m = markers[d.id]; if(m) m.setIcon(pinIcon(d, {dim: filtering && !keep.has(d.id), sel: LS.selected === d.id})); });
+  if(clusterGroup && clusterGroup.refreshClusters) clusterGroup.refreshClusters();
   // near circle
   nearLayer.clearLayers();
   if(LS.near) L_circle(LS.near);
@@ -2483,6 +2506,7 @@ map.on("zoomend", drawHalos);
     `<div class="lg-row">${pin("exact", .6)}Faded = verified longer ago (always also said in words)</div>` +
     `<div class="lg-row">${pin("approx", 1)}Dashed halo = neighborhood-level location</div>` +
     `<div class="lg-row">${pin("exact is-new", 1)}Ring = added this month, not yet re-verified</div>` +
+    `<div class="lg-row"><span class="cluster-donut mostly-approx" style="width:22px;height:22px;flex:none;background:conic-gradient(#5eead4 0deg 140deg,#a78bfa 140deg 250deg,#60a5fa 250deg 360deg)"><span style="width:14px;height:14px;font-size:0"></span></span>Group ring = category mix; dashed centre = mostly approximate</div>` +
     `<b>Connection lines</b>` +
     LINK_ORDER.map(k => `<div class="lg-row">${linkSwatch(k)}${LINK_TYPES[k].icon} ${LINK_TYPES[k].label} — ${LINK_TYPES[k].rule}</div>`).join("") +
     `<div class="lg-note">${INFERRED_NOTE}</div>`;
