@@ -298,6 +298,107 @@ html:not(.dark) .cluster-chip{background:rgba(255,255,255,.95);color:#1c1a17;
 .tour-step{font-size:12px;color:#6b7280;white-space:nowrap}
 .tour-actions{display:flex;gap:10px;justify-content:flex-end}
 html:not(.dark) .tour-card{background:#fff;border-color:#ddd;box-shadow:0 12px 40px rgba(0,0,0,.18)}
+
+/* === Atlas Lenses ======================================================
+   One map, several lenses. Trust is drawn on the pin itself (opacity =
+   freshness, dashed halo = approximate, ring = new this month) and spelled out
+   in text wherever it matters, so nothing relies on colour or opacity alone. */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.lens-bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:10px 18px;border-bottom:1px solid var(--line);background:var(--bg2)}
+.lens-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.lens-label{font-size:11px;text-transform:uppercase;letter-spacing:1.3px;color:var(--muted);font-weight:700;margin-right:2px}
+.lens-chip,.lens-btn{appearance:none;font:600 13px/1 inherit;font-family:inherit;min-height:36px;padding:8px 13px;border-radius:99px;cursor:pointer;
+  background:var(--panel);border:1px solid var(--line);color:var(--text);display:inline-flex;gap:6px;align-items:center}
+.lens-chip:hover,.lens-btn:hover{border-color:rgba(255,198,0,.55)}
+.lens-chip[aria-pressed="true"],.lens-btn[aria-pressed="true"]{color:#000;background:linear-gradient(90deg,#ffd54f,#ffc600);border-color:#ffc600}
+.lens-near{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.lens-near label{font-size:12.5px;color:var(--muted);font-weight:600}
+.lens-near select{font:500 13px inherit;font-family:inherit;min-height:36px;padding:6px 10px;border-radius:10px;background:var(--panel);color:var(--text);border:1px solid var(--line)}
+.lens-q{flex-basis:100%;font-size:13px;color:var(--muted);margin:0}
+.lens-q b{color:var(--text)}
+/* pins */
+.lens-pin{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;transition:opacity .2s,transform .2s}
+.lens-pin .pulse-dot{width:13px;height:13px;flex:none;opacity:var(--po,1)}
+.lens-pin .halo{position:absolute;inset:0;border-radius:50%;border:2px dashed var(--pc);background:color-mix(in srgb,var(--pc) 22%,transparent);opacity:var(--po,1)}
+.lens-pin .core{width:6px;height:6px;border-radius:50%;background:var(--pc);opacity:var(--po,1);position:relative}
+.lens-pin.is-new::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 0 0 2px #ffc600,0 0 12px rgba(255,198,0,.8)}
+.lens-pin.dim{opacity:.22;filter:grayscale(.85);transform:scale(.72)}
+.lens-pin.sel{transform:scale(1.35)}
+/* the six signals */
+.sig-strip{list-style:none;display:flex;flex-wrap:wrap;gap:5px;margin:0 0 14px;padding:0}
+.sig{display:inline-flex;gap:5px;align-items:center;font-size:11.5px;line-height:1.25;padding:4px 8px;border-radius:8px;border:1px solid var(--line);color:var(--muted);background:var(--panel2)}
+.sig-ok{color:var(--text)}
+.sig-warn{color:#fbbf24;border-color:rgba(251,191,36,.45)}
+.sig-missing{color:#fca5a5;border:1px dashed rgba(252,165,165,.6);font-style:italic}
+.sig-new{color:#ffd54f;border-color:#ffc600;font-weight:700}
+.sig-na{opacity:.85}
+.sig-strip.compact{margin:6px 0 8px;gap:4px}
+.sig-strip.compact .sig{font-size:10.5px;padding:3px 6px}
+html:not(.dark) .sig-warn{color:#b45309;border-color:rgba(180,83,9,.4)}
+html:not(.dark) .sig-missing{color:#b91c1c;border-color:rgba(185,28,28,.5)}
+html:not(.dark) .sig-new{color:#7a5300;background:#fff8db}
+.leaflet-popup-content .sig-strip{max-width:240px}
+/* results panel: the map-free view of a lens */
+.lens-panel{position:absolute;z-index:1001;top:62px;right:14px;bottom:14px;width:340px;display:none;flex-direction:column;
+  background:rgba(10,15,30,.95);border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(8px);overflow:hidden}
+.lens-panel.on{display:flex}
+html:not(.dark) .lens-panel{background:rgba(255,255,255,.97)}
+.lp-head{padding:12px 14px 8px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:flex-start}
+.lp-head h2{font-size:14px;margin:0}
+.lp-head .lp-sub{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4}
+.lp-collapse{margin-left:auto;min-width:44px;min-height:36px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;font-size:14px}
+.lp-sum{font-size:12px;color:var(--muted);padding:8px 14px;border-bottom:1px solid var(--line)}
+.lp-gap{margin:10px 12px 4px;padding:10px 12px;border:1px dashed rgba(252,165,165,.6);border-radius:10px;font-size:12.5px;line-height:1.5;color:var(--text)}
+.lp-gap .lens-btn{margin-top:8px}
+.lp-list{list-style:none;margin:0;padding:6px 8px 10px;overflow-y:auto;flex:1}
+.lp-beyond{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin:10px 6px 4px}
+.lp-item{border:1px solid transparent;border-radius:11px;padding:8px 8px 6px;margin-bottom:4px}
+.lp-item.sel{border-color:#ffc600;background:rgba(255,198,0,.07)}
+.lp-main{appearance:none;background:none;border:0;color:inherit;font:inherit;text-align:left;width:100%;cursor:pointer;display:flex;gap:7px;align-items:baseline;padding:2px 0;min-height:32px}
+.lp-rank{font-variant-numeric:tabular-nums;font-size:11.5px;color:var(--muted);min-width:18px}
+.lp-name{font-weight:700;font-size:13.5px}
+.lp-dist{margin-left:auto;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.lp-cat{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-left:25px}
+.lp-why{font-size:11.5px;color:var(--muted);line-height:1.45;margin:3px 0 0 25px}
+.lp-why b{color:var(--text);font-weight:600}
+.lp-emph{font-size:11.5px;line-height:1.45;margin:3px 0 0 25px;color:var(--text)}
+.lp-item .sig-strip{margin-left:25px}
+.lp-actions{display:flex;gap:6px;margin:4px 0 0 25px;flex-wrap:wrap}
+.lp-act{font:600 11.5px/1 inherit;font-family:inherit;padding:7px 10px;min-height:30px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+.lp-act:hover{border-color:#ffc600}
+/* connections */
+.arc-info{position:absolute;z-index:1000;left:50%;transform:translateX(-50%);bottom:14px;display:none;gap:8px;align-items:center;
+  background:rgba(10,15,30,.95);border:1px solid var(--line);border-radius:99px;padding:6px 8px 6px 14px;font-size:12.5px;color:var(--text);max-width:calc(100% - 28px)}
+.arc-info.on{display:flex}
+html:not(.dark) .arc-info{background:rgba(255,255,255,.97)}
+.arc-info .lp-act{min-height:30px}
+.conn-note{font-size:11.5px!important;color:var(--muted)!important;line-height:1.45!important;margin:-2px 0 8px!important}
+.conn-group{margin-bottom:9px}
+.conn-type{display:flex;gap:7px;align-items:center;font-size:12px;font-weight:700;margin-bottom:5px}
+.conn-type small{font-weight:500;color:var(--muted)}
+.conn-empty{font-size:13px;color:var(--text);padding:9px 11px;border:1px dashed var(--line);border-radius:10px}
+.conn-empty a,.lg-note a{color:var(--gold-ink)}
+a.chip{color:inherit;text-decoration:none}
+.link-swatch{display:inline-block;width:30px;height:6px;flex:none}
+/* legend: collapsible, and it explains the encodings, not only the colours */
+.lg-toggle{appearance:none;display:flex;width:100%;gap:6px;align-items:center;background:none;border:0;color:var(--text);font:700 11px/1 inherit;font-family:inherit;
+  text-transform:uppercase;letter-spacing:1.3px;cursor:pointer;padding:6px 2px;min-height:32px}
+.map-legend{max-height:calc(100% - 90px);overflow-y:auto}
+.map-legend.collapsed > :not(.lg-toggle){display:none}
+.lg-extra{margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+.lg-extra b{color:var(--text);font-size:10.5px;text-transform:uppercase;letter-spacing:1.2px}
+.lg-row{display:flex;gap:8px;align-items:center}
+.lg-row .lens-pin{width:22px;height:22px;flex:none}
+.lg-note{font-size:11px;line-height:1.4}
+@media(max-width:720px){
+  .lens-bar{padding:8px 12px}
+  .lens-panel{top:auto;left:0;right:0;bottom:0;width:auto;max-height:46%;border-radius:14px 14px 0 0}
+  .lens-panel.min{max-height:56px}
+  .lens-chip,.lens-btn,.lens-near select{min-height:44px}
+  .lp-main{min-height:44px}
+  .lp-act{min-height:40px}
+  .arc-info{bottom:auto;top:110px}
+}
 html:not(.dark) .tour-card p{color:#444}
 .tour-spot{outline:3px solid #ffc600;outline-offset:3px;border-radius:10px}
 /* shortlist + compare + new-this-month */
@@ -528,7 +629,35 @@ browse the <a href="e/">full organization index</a> or use the open dataset
 </nav>
 
 <section id="view-map" class="view view-full active">
+  <!-- === Atlas Lenses: lens bar (chips, near picker, map modes) === -->
+  <div class="lens-bar" id="lensBar">
+    <div class="lens-chips" id="lensChips" role="group" aria-label="Lens: see the map through your role">
+      <span class="lens-label" aria-hidden="true">See it as</span>
+    </div>
+    <div class="lens-near">
+      <label for="nearTown">Near</label>
+      <select id="nearTown"><option value="">Anywhere in MA</option></select>
+      <label for="nearR" class="sr-only">Radius</label>
+      <select id="nearR"><option value="10">within 10 km</option><option value="25" selected>within 25 km</option><option value="50">within 50 km</option></select>
+      <button type="button" class="lens-btn" id="nearMe" title="Uses your browser's location once; nothing is stored or sent">◎ Use my location</button>
+    </div>
+    <div class="lens-near">
+      <button type="button" class="lens-btn" id="netToggle" aria-pressed="false" title="Draw every recorded connection the active lens cares about">🕸 Show network</button>
+    </div>
+    <p class="lens-q" id="lensQ" aria-live="polite"></p>
+  </div>
   <div class="map-wrap">
+    <!-- results come before the map in the DOM so Tab reaches them before the pins -->
+    <aside class="lens-panel" id="lensPanel" aria-labelledby="lpTitle">
+      <div class="lp-head">
+        <div><h2 id="lpTitle">Results</h2><div class="lp-sub" id="lpSub"></div></div>
+        <button type="button" class="lp-collapse" id="lpCollapse" aria-expanded="true" aria-controls="lpList" aria-label="Collapse results">▾</button>
+      </div>
+      <div class="lp-sum" id="lpSum" role="status" aria-live="polite"></div>
+      <div id="lpGap"></div>
+      <ol class="lp-list" id="lpList" aria-label="Ranked results — the map-free view of this lens. Arrow keys move, Enter selects, Escape clears."></ol>
+    </aside>
+    <div class="arc-info" id="arcInfo" role="status" aria-live="polite"></div>
     <div id="map"></div>
     <div class="map-search">
       <input id="mapSearch" type="text" placeholder="Search the ecosystem…" autocomplete="off">
@@ -788,7 +917,10 @@ document.querySelectorAll(".tab[data-view]").forEach(t=>{
     $("view-"+currentView).classList.add("active");
     if(currentView==="map" && map) setTimeout(()=>map.invalidateSize(),60);
     if(currentView==="galaxy") { gxResize(); gxKick(); }
-    window.scrollTo({top:0});
+    // Bring the view itself into sight. scrollTo(0) used to leave it under the
+    // ~530 px hero, below the fold, on every tab switch.
+    const nav = document.querySelector(".nav");
+    window.scrollTo({top: Math.max(0, $("view-"+currentView).offsetTop - (nav ? nav.offsetHeight : 0))});
     updateURL();
   });
 });
@@ -856,6 +988,108 @@ const fmtDeadline = v => { const [y,m,dd] = v.split("-"); return `${MONTH_NAMES[
 /* ---------- html escaping (entry text is data, never markup) ---------- */
 const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
   .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+
+/* === Atlas Lenses: trust core ==========================================
+   Pure functions over DATA, declared before the map so pins can use them.
+   Exposed on window so tests and the console can call them. Nothing here
+   writes data, and every number is computed — never typed into copy.
+   ?asof=YYYY-MM pins "now" to a month, for deterministic demos and tests. */
+const ymIndex = ym => { const [y,m] = ym.split("-"); return +y*12 + +m; };
+const ASOF = (()=>{
+  const p = new URLSearchParams(location.search).get("asof");
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(p||"") ? p : localYM(new Date());
+})();
+const fmtMonthShort = v => { const [y,m] = v.split("-"); return `${MONTH_NAMES[+m-1].slice(0,3)} ${y}`; };
+// freshness → opacity, floored at .45 so an old pin stays perceivable;
+// always paired with the same fact in words (trustOf().verified)
+function trustOf(d, asOf = ASOF){
+  const months = d.lastVerified ? Math.max(0, ymIndex(asOf) - ymIndex(d.lastVerified)) : null;
+  const opacity = months === null ? 0.45 : months <= 1 ? 1 : months === 2 ? 0.8 : months <= 4 ? 0.6 : 0.45;
+  const ago = months === null ? "" : months === 0 ? "this month" : months === 1 ? "1 month ago" : `${months} months ago`;
+  return { months, opacity, approx: !!d.approx, isNew: d.added === asOf, ago,
+    verified: d.lastVerified ? `Verified ${fmtMonthShort(d.lastVerified)} · ${ago}` : "Verification month not stated" };
+}
+// links are plain ids and the schema allows no relation type, so treat them as
+// undirected — the drawer already showed inbound links as connections
+const ADJ = new Map(DATA.map(d => [d.id, new Set()]));
+DATA.forEach(d => (d.links||[]).forEach(t => {
+  if(t !== d.id && ADJ.has(t)){ ADJ.get(d.id).add(t); ADJ.get(t).add(d.id); }
+}));
+const degreeOf = id => (ADJ.get(id) || new Set()).size;
+const EDGES = [];
+ADJ.forEach((set, a) => set.forEach(b => { if(a < b) EDGES.push([a, b]); }));
+// The relation type is DERIVED from the two endpoint categories, first match wins.
+// It is a reading aid, not a fact, and every surface that shows it says so.
+const LINK_TYPES = {
+  capital:     {icon:"💸", label:"Capital",       color:"#c084fc", dash:null,       rule:"either end is a VC or angel"},
+  public:      {icon:"🏛️", label:"Public sector", color:"#f87171", dash:"2 7",      rule:"either end is government"},
+  research:    {icon:"🔬", label:"Research",      color:"#60a5fa", dash:"11 6",     rule:"either end is a university"},
+  program:     {icon:"🚀", label:"Program",       color:"#fbbf24", dash:"14 5 3 5", rule:"either end is an accelerator"},
+  partnership: {icon:"🤝", label:"Partnership",   color:"#cbd5e1", dash:"6 5",      rule:"either end is a corporate"},
+  community:   {icon:"🌱", label:"Community",     color:"#4ade80", dash:"1 7",      rule:"everything else"},
+};
+const LINK_ORDER = Object.keys(LINK_TYPES);
+const INFERRED_NOTE = "Type inferred from organization categories; the connection itself is maintainer-recorded.";
+function linkTypeOf(a, b){
+  const c = new Set([byId[a].cat, byId[b].cat]);
+  if(c.has("vc") || c.has("angel")) return "capital";
+  if(c.has("gov")) return "public";
+  if(c.has("university")) return "research";
+  if(c.has("accel")) return "program";
+  if(c.has("corporate")) return "partnership";
+  return "community";
+}
+// a funder = a VC/angel, or anyone who says it offers funding
+const isFunder = d => d.cat === "vc" || d.cat === "angel" || (d.offers||[]).includes("funding");
+const checkSizeOf = d => { const f = (d.facts||[]).find(f => /check|cheque|ticket/i.test(f[0])); return f ? f[1] : null; };
+function deadlineOf(d){
+  if(d.applyBy === "rolling") return {kind:"rolling", text:"Rolling applications"};
+  if(d.applyBy) return d.applyBy >= todayYMD()
+    ? {kind:"dated", text:"Apply by " + fmtDeadline(d.applyBy)}
+    : {kind:"passed", text:"Deadline passed · " + fmtDeadline(d.applyBy)};
+  return {kind:"none", text:"No deadline listed"};
+}
+const stageNames = ns => ns.map(n => STAGES.find(s => s.n === n)).filter(Boolean).map(s => s.t);
+// The six signals of doubt, in a fixed order. level: ok | warn (a real doubt) |
+// missing (not stated — rendered, never omitted) | na (doesn't apply; muted, not alarming)
+function signalsOf(d, asOf = ASOF){
+  const t = trustOf(d, asOf), deg = degreeOf(d.id), out = [];
+  if(t.isNew) out.push({k:"new", icon:"✨", text:"NEW this month — recently added, not yet re-verified over time", level:"new"});
+  out.push(d.approx ? {k:"loc", icon:"◌", text:"Neighborhood-level location", level:"warn"}
+                    : {k:"loc", icon:"📍", text:"Exact address", level:"ok"});
+  out.push(t.months === null ? {k:"verified", icon:"?", text:t.verified, level:"missing"}
+    : {k:"verified", icon: t.months >= 4 ? "⏳" : "✓", text:t.verified, level: t.months >= 4 ? "warn" : "ok"});
+  const st = stageNames(d.stages || []);
+  out.push(st.length ? {k:"stage", icon:"🧭", text:(d.cat === "startup" ? "Stage: " : "Stages: ") + st.join(", "), level:"ok"}
+    : d.cat === "startup" ? {k:"stage", icon:"🧭", text:"Stage not stated", level:"missing"}
+    : {k:"stage", icon:"🧭", text:"No founder stage listed", level:"na"});
+  out.push(deg ? {k:"links", icon:"🔗", text:`${deg} connection${deg === 1 ? "" : "s"}`, level:"ok"}
+               : {k:"links", icon:"🔗", text:"No connections recorded", level:"missing"});
+  if(isFunder(d)){
+    const c = checkSizeOf(d);
+    out.push(c ? {k:"check", icon:"💵", text:"Check: " + c, level:"ok"} : {k:"check", icon:"💵", text:"Check size not stated", level:"missing"});
+  }
+  const dl = deadlineOf(d);
+  out.push({k:"deadline", icon: dl.kind === "passed" ? "⌛" : "📅", text: dl.text,
+    level: dl.kind === "passed" ? "warn" : dl.kind === "none" ? "na" : "ok"});
+  return out;
+}
+function signalStripHTML(d, compact){
+  return `<ul class="sig-strip${compact ? " compact" : ""}" aria-label="Trust signals for ${esc(d.name)}">` +
+    signalsOf(d).map(s => `<li class="sig sig-${s.level}" data-sig="${s.k}"><span aria-hidden="true">${s.icon}</span>${esc(s.text)}</li>`).join("") +
+    `</ul>`;
+}
+// the pin: crisp dot (exact) or dashed soft halo (approximate); opacity = freshness;
+// ring = new this month; .dim = outside the active lens (dimmed, never hidden)
+function pinIcon(d, opts = {}){
+  const t = trustOf(d), size = t.approx ? 26 : 15;
+  const cls = ["lens-pin", t.approx ? "approx" : "exact", t.isNew ? "is-new" : "", opts.dim ? "dim" : "", opts.sel ? "sel" : ""].join(" ").trim();
+  const inner = t.approx ? `<span class="halo"></span><span class="core"></span>`
+    : `<div class="pulse-dot" style="background:${cColor(d.cat)};color:${cColor(d.cat)}"></div>`;
+  return L.divIcon({className:"", html:`<div class="${cls}" style="--pc:${cColor(d.cat)};--po:${t.opacity}">${inner}</div>`,
+    iconSize:[size,size], iconAnchor:[size/2,size/2]});
+}
+Object.assign(window, { trustOf, signalsOf, linkTypeOf, deadlineOf, checkSizeOf, ADJ, EDGES, ASOF });
 
 /* ---------- detail drawer ---------- */
 /* ---------- places to meet ----------
@@ -959,7 +1193,8 @@ function openDrawer(id){
   $("drCat").style.color = cInk(d.cat);
   $("drName").textContent = d.name;
   $("drLoc").textContent = "📍 " + d.loc + (d.approx ? " (approx.)" : "");
-  let html = `<p>${esc(d.desc)}</p>`;
+  // Atlas Lenses: the six signals come first, before anything that invites action
+  let html = signalStripHTML(d) + `<p>${esc(d.desc)}</p>`;
   if(d.why) html += `<div class="dr-why" style="--cc:${col}"><b>Why it matters for founders</b><div>${esc(d.why)}</div></div>`;
   if(applyOpen(d)) html += `<div class="dr-apply">⏳ Applications open — ${d.applyBy==="rolling" ? "rolling" : "apply by " + fmtDeadline(d.applyBy)}${d.applyNote ? " · " + esc(d.applyNote) : ""}</div>`;
   if(eventHosts[d.id]) html += `<div class="dr-apply dr-event">🎟 Hosting: ${esc(eventHosts[d.id].title)} — <a href="events/" target="_blank" rel="noopener">all events</a></div>`;
@@ -977,11 +1212,8 @@ function openDrawer(id){
     d.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join(" ") + `</div>`;
   if(d.stages && d.stages.length) html += `<div class="dr-sec">Founder stages</div><div class="chips">` +
     d.stages.map(n=>{const s=STAGES.find(x=>x.n===n);return `<span class="tag">${s.icon} ${s.t}</span>`}).join(" ") + `</div>`;
-  const rel = (d.links||[]).filter(x=>byId[x]);
-  const backRel = DATA.filter(o=>(o.links||[]).includes(d.id) && !rel.includes(o.id)).map(o=>o.id);
-  const allRel = [...rel, ...backRel];
-  if(allRel.length) html += `<div class="dr-sec">Connected to</div><div class="chips">` +
-    allRel.map(x=>{const o=byId[x];return `<span class="chip" onclick="openDrawer('${x}')"><span class="lg-dot" style="color:${cColor(o.cat)};background:${cColor(o.cat)}"></span>${esc(o.name)}</span>`}).join("") + `</div>`;
+  // Atlas Lenses: grouped by derived link type, and an empty section is said out loud
+  html += connectionsHTML(d);
   if(d.lastVerified) html += isStale(d)
     ? `<div class="dr-verified stale">⚠️ Last verified ${fmtMonth(d.lastVerified)} — details may have changed. Spot something off? Use 🚩 Flag below.</div>`
     : `<div class="dr-verified">✓ ${fmtVerified(d.lastVerified)}</div>`;
@@ -999,6 +1231,7 @@ function openDrawer(id){
   drawerId = d.id;
   updateURL();
   dialogOpened($("drawer"));
+  lensOnOpen(d.id);
 }
 window.openDrawer = openDrawer;
 function closeDrawer(){ $("drawer").classList.remove("open"); $("overlay").classList.remove("on"); drawerId = null; updateURL(); dialogClosed(); }
@@ -1181,17 +1414,15 @@ function setMapTiles(){ if(!map) return; if(mapTiles) map.removeLayer(mapTiles);
   clusterCtl.addTo(map);
 
   DATA.forEach(d=>{
-    const col = cColor(d.cat);
-    const icon = L.divIcon({className:"", html:
-      `<div class="pulse-dot" style="width:13px;height:13px;background:${col};color:${col}"></div>`,
-      iconSize:[13,13], iconAnchor:[7,7]});
-    const m = L.marker([d.lat,d.lng], {icon, title:d.name});
+    // Atlas Lenses: the pin carries trust (see pinIcon), the popup the six signals
+    const m = L.marker([d.lat,d.lng], {icon:pinIcon(d), title:d.name});
     m.bindPopup(
       `<div class="pop-name">${esc(d.name)}</div>`+
       `<div class="pop-cat" style="color:${cInk(d.cat)}">${cLabel(d.cat)}</div>`+
+      signalStripHTML(d, true)+
       `<div class="pop-desc">${esc(d.desc.length>140 ? d.desc.slice(0,140)+"…" : d.desc)}</div>`+
       `<span class="pop-btn" onclick="openDrawer('${d.id}')">Full details →</span>`,
-      {maxWidth:260});
+      {maxWidth:270});
     pinGroup().addLayer(m);
     markers[d.id] = m;
   });
@@ -1852,6 +2083,393 @@ document.addEventListener("keydown", e=>{ if(e.key === "Escape" && tourStep >= 0
   if(!seen && !location.search && !location.hash) setTimeout(startTour, 1400);  // never over a shared link
 })();
 
+/* === Atlas Lenses: lenses, ranked results, connections on the map ======
+   A lens is configuration, not a code path: which categories and offers it
+   emphasises (others are dimmed, never hidden), which derived link types it
+   draws, the founder stages it cares about, and how it weighs relevance,
+   proximity, trust and connectivity. "All" leaves the original map untouched. */
+const LENSES = {
+  all:        {icon:"🌐", label:"All", q:"Every organization in the Atlas. Pick a lens to rank them for your role."},
+  student:    {icon:"🎓", label:"Student", q:"What's near me, and where do I start?",
+               cats:["student","community","university","event","accel","space"], offers:["community","mentorship","grants","talent"],
+               links:["community","research","program"], stages:[1,2], w:{lens:3, near:3, trust:1, conn:1}},
+  founder:    {icon:"🚀", label:"Founder", q:"Who can fund, house or power my stage?",
+               cats:["vc","angel","accel","space","corporate"], offers:["funding","grants","space","compute","customers","mentorship"],
+               links:["capital","program","partnership"], stages:[2,3,4], w:{lens:3, near:1, trust:2, conn:1}},
+  investor:   {icon:"💼", label:"Investor", q:"Where's the deal flow, and who do I syndicate with?",
+               cats:["startup","university","accel","event","vc","angel"], offers:["talent","customers"],
+               links:["capital","research","program"], stages:[3,4,5], w:{lens:3, near:1, trust:1, conn:2}},
+  maintainer: {icon:"🛡️", label:"Maintainer", q:"What should a human re-check first? Flags only — fixes go through 🚩 Flag, never straight into the data.",
+               cats:null, offers:[], links:LINK_ORDER, stages:[], review:true, w:{lens:1, near:1, trust:0, conn:0}},
+};
+// town centres for "Near" (rounded; good to a few hundred metres)
+const TOWNS = {
+  boston:["Boston",42.3601,-71.0589], cambridge:["Cambridge",42.3736,-71.1097], somerville:["Somerville",42.3876,-71.0995],
+  waltham:["Waltham",42.3765,-71.2356], burlington:["Burlington",42.5048,-71.1956], lowell:["Lowell",42.6334,-71.3162],
+  worcester:["Worcester",42.2626,-71.8023], framingham:["Framingham",42.2793,-71.4162], amherst:["Amherst",42.3732,-72.5199],
+  northampton:["Northampton",42.3251,-72.6412], holyoke:["Holyoke",42.2043,-72.6162], springfield:["Springfield",42.1015,-72.5898],
+  pittsfield:["Pittsfield",42.4501,-73.2454], "new-bedford":["New Bedford",41.6362,-70.9342], "fall-river":["Fall River",41.7015,-71.1550],
+  hyannis:["Hyannis",41.6525,-70.2881],
+};
+const LS = { lens:"all", near:null, r:25, network:false, selected:null, results:[] };
+const arcLayer = L.layerGroup().addTo(map), netLayer = L.layerGroup(), nearLayer = L.layerGroup().addTo(map), haloLayer = L.layerGroup();
+const kmOf = (near, d) => metresBetween(near.lat, near.lng, d.lat, d.lng) / 1000;
+const fmtKm = km => km < 10 ? km.toFixed(1) + " km" : Math.round(km) + " km";
+
+// Maintainer: a sum of flags, each one shown as a reason
+function reviewOf(d){
+  const t = trustOf(d), why = [];
+  if(t.isNew) why.push("new this month");
+  if(d.approx) why.push("approximate pin");
+  if(!degreeOf(d.id)) why.push("no connections");
+  if(d.cat === "startup" && !(d.stages||[]).length) why.push("startup without a stage");
+  if(isFunder(d) && !checkSizeOf(d)) why.push("funder without a check size");
+  if(t.months !== null && t.months >= 4) why.push(`verified ${t.ago}`);
+  return {s: why.length, why: why.length ? ["Review flags: " + why.join(" · ")] : []};
+}
+function lensRelevance(d, lens){
+  if(lens.review) return reviewOf(d);
+  if(!lens.cats) return {s:1, why:[]};
+  let s = 0; const why = [];
+  if(lens.cats.includes(d.cat)){ s += 2; why.push(`${cLabel(d.cat)} (a ${lens.label}-lens category)`); }
+  const off = (d.offers||[]).filter(o => lens.offers.includes(o));
+  if(off.length){ s += Math.min(1.5, off.length * .5); why.push("offers " + off.map(o => OFFERS_META[o].label.toLowerCase()).join(", ")); }
+  const st = stageNames((d.stages||[]).filter(n => lens.stages.includes(n)));
+  if(st.length){ s += .5; why.push("serves " + st.join(", ")); }
+  return {s, why};
+}
+// rank = lensRelevance + proximity + trust + connectivity, each with its reason
+function rankLens(lensKey, near, r){
+  const lens = LENSES[lensKey], w = lens.w || {lens:1, near:3, trust:1, conn:1}, rows = [];
+  for(const d of DATA){
+    const rel = lensRelevance(d, lens);
+    if(rel.s <= 0) continue;
+    const t = trustOf(d), deg = degreeOf(d.id), km = near ? kmOf(near, d) : null;
+    const prox = km === null ? 0 : Math.max(0, 1 - km / r);
+    const trust = t.opacity - (t.approx ? .15 : 0);
+    const score = w.lens * rel.s + w.near * prox * 2 + w.trust * trust + w.conn * Math.min(deg, 6) / 6;
+    const why = [...rel.why];
+    if(km !== null) why.push(`${fmtKm(km)} from ${near.name}`);
+    if(!lens.review){
+      why.push(t.months !== null && t.months >= 4 ? `${t.verified} (ranks lower)` : t.verified);
+      if(deg) why.push(`${deg} connection${deg === 1 ? "" : "s"}`);
+    }
+    rows.push({d, km, score, why, inRadius: km === null || km <= r});
+  }
+  return rows.sort((a, b) => b.score - a.score || (b.d.lastVerified||"").localeCompare(a.d.lastVerified||""));
+}
+window.rankLens = rankLens;
+
+// lens-specific line on each result
+function lensEmphasis(d, lensKey){
+  const parts = [];
+  if(lensKey === "student"){
+    if(eventHosts[d.id]) parts.push(`🎟 Next event: ${esc(eventHosts[d.id].title)}`);
+    if((d.offers||[]).includes("grants")) parts.push("🎁 Equity-free");
+    else if((d.offers||[]).includes("funding")) parts.push("💸 Equity funding — not equity-free");
+  } else if(lensKey === "founder"){
+    const st = stageNames(d.stages||[]);
+    parts.push(st.length ? "🧭 Fits " + esc(st.join(", ")) : "🧭 Stage fit not stated");
+    if(isFunder(d)){ const c = checkSizeOf(d); parts.push(c ? "💵 " + esc(c) : "💵 Check size not stated"); }
+    const dl = deadlineOf(d); parts.push("📅 " + esc(dl.kind === "none" ? "No deadline stated" : dl.text));
+  } else if(lensKey === "investor"){
+    const partners = [...ADJ.get(d.id)];
+    if(d.cat === "startup"){
+      const f = partners.filter(x => isFunder(byId[x]));
+      parts.push(f.length ? "💸 Backers on record: " + f.map(x => esc(byId[x].name)).join(", ") : "💸 No backers recorded");
+    } else if(isFunder(d)){
+      const co = new Set();
+      partners.filter(x => byId[x].cat === "startup").forEach(s => ADJ.get(s).forEach(f => { if(f !== d.id && isFunder(byId[f])) co.add(f); }));
+      parts.push(co.size ? "🤝 Co-investors (same startups): " + [...co].slice(0,3).map(x => esc(byId[x].name)).join(", ") + (co.size > 3 ? ` +${co.size - 3}` : "")
+                         : "🤝 No co-investors on record");
+    }
+  }
+  return parts.length ? `<div class="lp-emph">${parts.join(" · ")}</div>` : "";
+}
+
+function renderLensBar(){
+  const box = $("lensChips");
+  box.querySelectorAll(".lens-chip").forEach(b => b.remove());
+  Object.entries(LENSES).forEach(([k, lens]) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "lens-chip"; b.dataset.lens = k;
+    b.setAttribute("aria-pressed", String(LS.lens === k));
+    b.innerHTML = `<span aria-hidden="true">${lens.icon}</span>${lens.label}`;
+    b.addEventListener("click", () => setLens(k));
+    box.appendChild(b);
+  });
+  const sel = $("nearTown");
+  Object.entries(TOWNS).forEach(([k, t]) => { const o = document.createElement("option"); o.value = k; o.textContent = t[0]; sel.appendChild(o); });
+}
+function setLens(k){
+  if(!LENSES[k]) return;
+  LS.lens = k;
+  document.querySelectorAll(".lens-chip").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lens === k)));
+  lensRefresh();
+}
+function setNear(key, r){
+  if(r) LS.r = +r;
+  if(key === "me") return;              // set by the geolocation button, never from a URL
+  LS.near = key && TOWNS[key] ? {key, name:TOWNS[key][0], lat:TOWNS[key][1], lng:TOWNS[key][2]} : null;
+  $("nearTown").value = LS.near ? key : "";
+  $("nearR").value = String(LS.r);
+}
+
+function lensRefresh(opts = {}){
+  const lens = LENSES[LS.lens];
+  const rows = (LS.lens !== "all" || LS.near) ? rankLens(LS.lens, LS.near, LS.r) : [];
+  LS.results = rows;
+  const keep = new Set(rows.filter(r => r.inRadius).map(r => r.d.id));
+  const filtering = LS.lens !== "all" || !!LS.near;
+  // pins: dim what the lens doesn't emphasise, never hide it
+  DATA.forEach(d => { const m = markers[d.id]; if(m) m.setIcon(pinIcon(d, {dim: filtering && !keep.has(d.id), sel: LS.selected === d.id})); });
+  // near circle
+  nearLayer.clearLayers();
+  if(LS.near) L_circle(LS.near);
+  $("lensQ").innerHTML = `<b>${lens.icon} ${lens.label}:</b> ${esc(lens.q)}`;
+  renderResults(rows);
+  if(LS.network) drawNetwork();
+  lensWriteURL();
+  if(opts.fit !== false && LS.near && currentView === "map" && !LS.selected)
+    map.fitBounds(L.latLng(LS.near.lat, LS.near.lng).toBounds(LS.r * 2000), {animate: !reduceMotion(), padding:[20,20]});
+}
+function L_circle(near){
+  L.circle([near.lat, near.lng], {radius: LS.r * 1000, color:"#ffc600", weight:1.5, dashArray:"6 6", fillOpacity:.04, interactive:false}).addTo(nearLayer);
+}
+
+function renderResults(rows){
+  const panel = $("lensPanel"), list = $("lpList"), lens = LENSES[LS.lens];
+  const show = LS.lens !== "all" || !!LS.near;
+  panel.classList.toggle("on", show);
+  if(!show){ list.innerHTML = ""; $("lpGap").innerHTML = ""; $("lpSum").textContent = ""; return; }
+  const inR = rows.filter(r => r.inRadius);
+  const where = LS.near ? ` near ${LS.near.name}` : "";
+  $("lpTitle").textContent = `${lens.icon} ${lens.label} lens${where}`;
+  $("lpSub").textContent = LS.near ? `Within ${LS.r} km · ranked by relevance, distance, freshness and connections`
+                                   : "Ranked by relevance, freshness and connections";
+  const nA = inR.filter(r => r.d.approx).length, nN = inR.filter(r => trustOf(r.d).isNew).length;
+  $("lpSum").textContent = `${lens.label} lens${where}: ${inR.length} organization${inR.length === 1 ? "" : "s"}, ${nA} approximate, ${nN} new this month.`;
+  // dead end: say it is a gap in the map, show the nearest alternatives, offer to add one
+  let gap = "", beyond = [];
+  if(LS.near && inR.length < 3){
+    const lensBit = LS.lens !== "all" ? ` for the ${lens.label} lens` : "";
+    gap = `<div class="lp-gap">${inR.length ? `Only ${inR.length} Atlas entr${inR.length === 1 ? "y" : "ies"}` : "No Atlas entries"} within ${LS.r} km of ${esc(LS.near.name)}${lensBit}. ` +
+      `This is a gap in the map, not proof there's no AI here.<br>` +
+      `<button type="button" class="lens-btn" onclick="suggestEntry()">➕ Suggest an entry</button></div>`;
+    beyond = rows.filter(r => !r.inRadius).sort((a, b) => a.km - b.km).slice(0, 5);
+  }
+  $("lpGap").innerHTML = gap;
+  const shown = inR.slice(0, 40);
+  const item = (r, i) => {
+    const d = r.d, id = d.id;
+    const doubts = signalsOf(d).filter(s => s.level === "warn" || s.level === "missing" || s.level === "new");
+    return `<li class="lp-item${LS.selected === id ? " sel" : ""}" data-id="${id}">` +
+      `<button type="button" class="lp-main" data-id="${id}" aria-describedby="lpw-${id}">` +
+        `<span class="lp-rank">${i + 1}</span><span class="lp-name">${esc(d.name)}</span>` +
+        (r.km !== null ? `<span class="lp-dist">${fmtKm(r.km)}</span>` : "") + `</button>` +
+      `<div class="lp-cat" style="color:${cInk(d.cat)}">${cLabel(d.cat)}</div>` +
+      `<div class="lp-why" id="lpw-${id}"><b>Why ranked:</b> ${esc(r.why.join(" · "))}</div>` +
+      lensEmphasis(d, LS.lens) +
+      (doubts.length ? `<ul class="sig-strip compact" aria-label="Doubts about ${esc(d.name)}">` +
+        doubts.map(s => `<li class="sig sig-${s.level}"><span aria-hidden="true">${s.icon}</span>${esc(s.text.split(" — ")[0])}</li>`).join("") + `</ul>` : "") +
+      `<div class="lp-actions"><button type="button" class="lp-act" onclick="openDrawer('${id}')">Details →</button>` +
+      `<button type="button" class="lp-act" onclick="toggleStar('${id}');lensRefresh({fit:false})" aria-pressed="${starSet.has(id)}">${starSet.has(id) ? "★ Saved" : "☆ Save"}</button>` +
+      `<a class="lp-act" href="${esc(d.url)}" target="_blank" rel="noopener" title="The entry's source: its own website">Source ↗</a></div></li>`;
+  };
+  list.innerHTML = shown.map(item).join("") +
+    (beyond.length ? `<li class="lp-beyond" aria-hidden="true">Nearest beyond ${LS.r} km</li>` + beyond.map((r, i) => item(r, shown.length + i)).join("") : "") +
+    (inR.length > shown.length ? `<li class="lp-beyond">Top ${shown.length} of ${inR.length} shown</li>` : "");
+}
+// keyboard: ↑/↓ move through results, Enter selects (pans + draws arcs), Esc clears
+$("lpList").addEventListener("click", e => {
+  const b = e.target.closest(".lp-main"); if(b) lensSelect(b.dataset.id, {pan:true});
+});
+$("lpList").addEventListener("keydown", e => {
+  const items = [...$("lpList").querySelectorAll(".lp-main")];
+  const i = items.indexOf(document.activeElement);
+  if(e.key === "ArrowDown" || e.key === "ArrowUp"){
+    e.preventDefault();
+    const n = items[Math.max(0, Math.min(items.length - 1, (i < 0 ? -1 : i) + (e.key === "ArrowDown" ? 1 : -1)))];
+    if(n) n.focus();
+  } else if(e.key === "Escape" && !openDialogEl()){ e.stopPropagation(); lensClearSelection(); }
+});
+$("lpCollapse").addEventListener("click", () => {
+  const p = $("lensPanel"), min = !p.classList.contains("min");
+  p.classList.toggle("min", min);
+  $("lpList").style.display = min ? "none" : "";
+  $("lpGap").style.display = min ? "none" : "";
+  $("lpCollapse").setAttribute("aria-expanded", String(!min));
+  $("lpCollapse").textContent = min ? "▴" : "▾";
+});
+
+/* connections on the base map: quadratic Bézier arcs in lat/lng, on their own
+   layer outside the clusters so an arc reaches the partner's true position */
+function bezier(a, b, bend = .2, n = 32){
+  const [y1, x1] = a, [y2, x2] = b, cx = (x1 + x2) / 2 - (y2 - y1) * bend, cy = (y1 + y2) / 2 + (x2 - x1) * bend, pts = [];
+  for(let i = 0; i <= n; i++){ const t = i / n, u = 1 - t; pts.push([u*u*y1 + 2*u*t*cy + t*t*y2, u*u*x1 + 2*u*t*cx + t*t*x2]); }
+  return pts;
+}
+function arcTooltip(a, b, type){
+  const T = LINK_TYPES[type];
+  return `${T.icon} <b>${T.label}</b> link (inferred) · ${esc(byId[a].name)} ↔ ${esc(byId[b].name)}<br><small>${INFERRED_NOTE}</small>`;
+}
+function drawArcs(id){
+  arcLayer.clearLayers();
+  const d = byId[id]; if(!d) return;
+  const lens = LENSES[LS.lens], partners = [...ADJ.get(id)];
+  partners.forEach(x => {
+    const o = byId[x], type = linkTypeOf(id, x), T = LINK_TYPES[type];
+    const inLens = LS.lens === "all" || lens.links.includes(type);
+    L_poly(bezier([d.lat, d.lng], [o.lat, o.lng]), {color:T.color, weight: inLens ? 3 : 1.6, opacity: inLens ? .95 : .4, dashArray:T.dash || null, className:"lens-arc"})
+      .bindTooltip(arcTooltip(id, x, type), {sticky:true}).addTo(arcLayer);
+    L.circleMarker([o.lat, o.lng], {radius:5, color:T.color, weight:2, fillColor:cColor(o.cat), fillOpacity:1})
+      .bindTooltip(`${esc(o.name)} · ${T.label} (inferred)`).on("click", () => openDrawer(x)).addTo(arcLayer);
+  });
+  const info = $("arcInfo");
+  info.innerHTML = `<span>🔗 <b>${esc(d.name)}</b>: ${partners.length ? `${partners.length} recorded connection${partners.length === 1 ? "" : "s"} · line types inferred from categories` : "no connections recorded yet"}</span>` +
+    `<button type="button" class="lp-act" onclick="lensClearSelection()" aria-label="Clear connections">✕ Clear</button>`;
+  info.classList.add("on");
+  return partners;
+}
+const L_poly = (pts, o) => L.polyline(pts, o);
+function drawNetwork(){
+  netLayer.clearLayers();
+  if(!LS.network){ map.removeLayer(netLayer); return; }
+  const lens = LENSES[LS.lens];
+  EDGES.forEach(([a, b]) => {
+    const type = linkTypeOf(a, b), T = LINK_TYPES[type];
+    if(LS.lens !== "all" && !lens.links.includes(type)) return;
+    if(!activeCats.has(byId[a].cat) || !activeCats.has(byId[b].cat)) return;
+    L_poly(bezier([byId[a].lat, byId[a].lng], [byId[b].lat, byId[b].lng], .15, 20),
+      {color:T.color, weight:1.3, opacity:.5, dashArray:T.dash || null, className:"lens-net"})
+      .bindTooltip(arcTooltip(a, b, type), {sticky:true}).addTo(netLayer);
+  });
+  if(!map.hasLayer(netLayer)) netLayer.addTo(map);
+}
+function lensSelect(id, opts = {}){
+  if(!byId[id]) return;
+  LS.selected = id;
+  const partners = drawArcs(id) || [];
+  document.querySelectorAll(".lp-item").forEach(li => li.classList.toggle("sel", li.dataset.id === id));
+  const prev = document.querySelector(".lens-pin.sel"); if(prev) prev.classList.remove("sel");
+  const m = markers[id]; if(m && m._icon){ const p = m._icon.querySelector(".lens-pin"); if(p) p.classList.add("sel"); }
+  if(opts.pan && currentView === "map"){
+    const d = byId[id], pts = [[d.lat, d.lng], ...partners.map(x => [byId[x].lat, byId[x].lng])];
+    const drawerOpen = $("drawer").classList.contains("open");
+    const right = drawerOpen ? 420 : ($("lensPanel").classList.contains("on") && innerWidth > 720 ? 360 : 40);
+    if(pts.length > 1) map.fitBounds(pts, {paddingTopLeft:[40, 60], paddingBottomRight:[right, 40], maxZoom:14, animate:!reduceMotion()});
+    else mapGoTo([d.lat, d.lng], 14);
+  }
+  if(window.lens3dSelect) window.lens3dSelect(id);
+}
+function lensClearSelection(){
+  LS.selected = null; arcLayer.clearLayers(); $("arcInfo").classList.remove("on");
+  document.querySelectorAll(".lp-item.sel").forEach(li => li.classList.remove("sel"));
+  document.querySelectorAll(".lens-pin.sel").forEach(p => p.classList.remove("sel"));
+  if(window.lens3dSelect) window.lens3dSelect(null);
+}
+window.lensSelect = lensSelect; window.lensClearSelection = lensClearSelection; window.lensRefresh = lensRefresh;
+// called by openDrawer (pin popups, Directory, Galaxy, ?entry=): the arcs follow
+function lensOnOpen(id){ lensSelect(id, {pan: currentView === "map" && LS.selected !== id}); }
+// clicking a pin selects it too, so arcs appear before the popup's "Full details"
+Object.entries(markers).forEach(([id, m]) => m.on("click", () => lensSelect(id)));
+
+// "Drawer connections": grouped by derived type, each chip a deep link
+function connectionsHTML(d){
+  const ids = [...ADJ.get(d.id)];
+  if(!ids.length) return `<div class="dr-sec">Connected to</div><div class="conn-empty">No connections recorded yet. ` +
+    `<a href="#" onclick="suggestConnection('${d.id}');return false">Suggest a connection</a> — a maintainer reviews it before anything changes.</div>`;
+  const groups = {};
+  ids.forEach(x => (groups[linkTypeOf(d.id, x)] = groups[linkTypeOf(d.id, x)] || []).push(x));
+  return `<div class="dr-sec">Connected to</div><p class="conn-note">ⓘ ${INFERRED_NOTE}</p>` +
+    LINK_ORDER.filter(k => groups[k]).map(k => { const T = LINK_TYPES[k]; return `<div class="conn-group">` +
+      `<div class="conn-type">${linkSwatch(k)}<span aria-hidden="true">${T.icon}</span>${T.label} <small>(inferred)</small></div><div class="chips">` +
+      groups[k].map(x => { const o = byId[x]; return `<a class="chip" href="?entry=${encodeURIComponent(x)}" onclick="openDrawer('${x}');return false">` +
+        `<span class="lg-dot" style="color:${cColor(o.cat)};background:${cColor(o.cat)}"></span>${esc(o.name)}</a>`; }).join("") + `</div></div>`; }).join("");
+}
+function linkSwatch(k){
+  const T = LINK_TYPES[k];
+  return `<svg class="link-swatch" viewBox="0 0 30 6" aria-hidden="true"><line x1="1" y1="3" x2="29" y2="3" stroke="${T.color}" stroke-width="3" stroke-linecap="round"${T.dash ? ` stroke-dasharray="${T.dash}"` : ""}/></svg>`;
+}
+// reuses the Flag issue flow: a human reviews it, nothing is written from here
+function suggestConnection(id){
+  const d = byId[id];
+  window.open(ghIssueUrl("flag-entry.yml", {title:`[Connection] ${d.name}`, labels:"flag", "entry-id":`${d.name} (id: ${d.id})`}), "_blank");
+}
+window.suggestConnection = suggestConnection;
+
+// true-scale halos (about 500 m) for approximate pins once you are close enough to read them
+function drawHalos(){
+  haloLayer.clearLayers();
+  if(map.getZoom() < 13){ map.removeLayer(haloLayer); return; }
+  DATA.forEach(d => { if(d.approx && activeCats.has(d.cat))
+    L.circle([d.lat, d.lng], {radius:500, color:cColor(d.cat), weight:1, dashArray:"4 5", fillOpacity:.06, opacity:.6, interactive:false}).addTo(haloLayer); });
+  if(!map.hasLayer(haloLayer)) haloLayer.addTo(map);
+}
+map.on("zoomend", drawHalos);
+
+// legend: collapsible (collapsed on phones), and it explains every encoding
+(function lensLegend(){
+  const lg = $("mapLegend");
+  const btn = document.createElement("button");
+  btn.type = "button"; btn.className = "lg-toggle"; btn.setAttribute("aria-controls", "mapLegend");
+  lg.prepend(btn);
+  const pin = (cls, o) => `<span class="lens-pin ${cls}" style="--pc:#60a5fa;--po:${o}">${cls.includes("approx") ? `<span class="halo"></span><span class="core"></span>` : `<div class="pulse-dot" style="background:#60a5fa;color:#60a5fa"></div>`}</span>`;
+  const extra = document.createElement("div");
+  extra.className = "lg-extra";
+  extra.innerHTML = `<b>How to read a pin</b>` +
+    `<div class="lg-row">${pin("exact", 1)}Exact address, verified in the last month</div>` +
+    `<div class="lg-row">${pin("exact", .6)}Faded = verified longer ago (always also said in words)</div>` +
+    `<div class="lg-row">${pin("approx", 1)}Dashed halo = neighborhood-level location</div>` +
+    `<div class="lg-row">${pin("exact is-new", 1)}Ring = added this month, not yet re-verified</div>` +
+    `<b>Connection lines</b>` +
+    LINK_ORDER.map(k => `<div class="lg-row">${linkSwatch(k)}${LINK_TYPES[k].icon} ${LINK_TYPES[k].label} — ${LINK_TYPES[k].rule}</div>`).join("") +
+    `<div class="lg-note">${INFERRED_NOTE}</div>`;
+  lg.appendChild(extra);
+  const set = open => {
+    lg.classList.toggle("collapsed", !open);
+    btn.setAttribute("aria-expanded", String(open));
+    btn.innerHTML = `<span aria-hidden="true">${open ? "▾" : "▸"}</span> Legend`;
+  };
+  btn.addEventListener("click", () => set(lg.classList.contains("collapsed")));
+  set(innerWidth > 720);
+})();
+
+// controls
+$("nearTown").addEventListener("change", e => { setNear(e.target.value); lensRefresh(); });
+$("nearR").addEventListener("change", e => { LS.r = +e.target.value; lensRefresh(); });
+$("nearMe").addEventListener("click", () => {
+  if(!navigator.geolocation){ $("lensQ").textContent = "This browser can't share a location — pick a town instead."; return; }
+  navigator.geolocation.getCurrentPosition(p => {
+    LS.near = {key:"me", name:"your location", lat:p.coords.latitude, lng:p.coords.longitude};
+    $("nearTown").value = ""; lensRefresh();
+  }, () => { $("lensQ").textContent = "Location wasn't shared — pick a town instead."; }, {maximumAge:600000, timeout:10000});
+});
+$("netToggle").addEventListener("click", () => {
+  LS.network = !LS.network;
+  $("netToggle").setAttribute("aria-pressed", String(LS.network));
+  drawNetwork();
+});
+function lensWriteURL(){
+  const u = new URL(location.href), set = (k, v) => v ? u.searchParams.set(k, v) : u.searchParams.delete(k);
+  set("lens", LS.lens !== "all" ? LS.lens : "");
+  set("near", LS.near && LS.near.key !== "me" ? LS.near.key : "");   // never write a visitor's coordinates
+  set("r", LS.near && LS.near.key !== "me" && LS.r !== 25 ? String(LS.r) : "");
+  try{ history.replaceState(null, "", u.pathname + u.search + u.hash); }catch(e){}
+}
+// ?lens=student&near=amherst&r=25 (combines with ?entry= and #view); unknown values are ignored
+function lensApplyParams(){
+  const p = new URLSearchParams(location.search);
+  const r = +p.get("r");
+  if([10, 25, 50].includes(r)) LS.r = r;
+  if(LENSES[p.get("lens")]) LS.lens = p.get("lens");
+  setNear(p.get("near"));
+  document.querySelectorAll(".lens-chip").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lens === LS.lens)));
+  if(p.get("lens") || p.get("near")) lensRefresh({fit: !p.get("entry")});
+  else $("lensQ").innerHTML = `<b>${LENSES.all.icon} ${LENSES.all.label}:</b> ${esc(LENSES.all.q)}`;
+}
+renderLensBar();
+
 /* ---------- structured data (SEO) ---------- */
 (function jsonLd(){
   try{
@@ -1881,7 +2499,8 @@ document.addEventListener("keydown", e=>{ if(e.key === "Escape" && tourStep >= 0
     document.head.appendChild(s);
   }catch(e){}
 })();
-// On load: honor #<view> and ?entry=<id>; unknown values are silently ignored.
+// On load: honor #<view>, ?entry=<id> and the Atlas Lenses params
+// (?lens= &near= &r= &mode= &asof=); unknown values are silently ignored.
 (function(){
   const h = location.hash.slice(1);
   // Read ?entry= BEFORE switching view. switchView() ends in updateURL(), which
@@ -1889,6 +2508,7 @@ document.addEventListener("keydown", e=>{ if(e.key === "Escape" && tourStep >= 0
   // nothing and a shared "?entry=<id>#directory" link silently lost its entry.
   const e = new URLSearchParams(location.search).get("entry");
   if(["map","galaxy","journey","directory"].includes(h) && h !== currentView) switchView(h);
+  lensApplyParams();
   if(e && byId[e]) openDrawer(e);
 })();
 </script>
