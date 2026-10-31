@@ -418,6 +418,12 @@ html:not(.dark) .eco-row .v{color:#7a5300}
 .drill-chip button{min-height:28px;border-radius:99px;border:0;background:rgba(0,0,0,.15);color:#000;font:700 12px inherit;font-family:inherit;padding:4px 10px;cursor:pointer}
 /* 3D: a native MapLibre map over the Leaflet one, created on demand and destroyed on exit */
 #map3d{position:absolute;inset:0;z-index:990;background:#0a0f1e}
+#map3d .maplibregl-popup-content{background:rgba(10,15,30,.97);color:#ececf1;font:500 13.5px/1.45 'Red Hat Display',system-ui,sans-serif;
+  border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:9px 13px;box-shadow:0 8px 28px rgba(0,0,0,.5);max-width:260px}
+#map3d .maplibregl-popup-content b{font-size:15px;font-weight:700}
+#map3d .maplibregl-popup-content small{color:#c3cadf;font-size:12.5px}
+#map3d .maplibregl-popup-tip{border-top-color:rgba(10,15,30,.97)!important;border-bottom-color:rgba(10,15,30,.97)!important}
+#map3d .deck-tooltip{font-family:'Red Hat Display',system-ui,sans-serif!important;line-height:1.45}
 .map-wrap.is3d .map-search,.map-wrap.is3d .map-view-switch,.map-wrap.is3d #map .leaflet-control-container{visibility:hidden}
 .regions3d{position:absolute;z-index:1001;left:14px;top:14px;width:220px;background:rgba(6,9,18,.95);border:1px solid var(--line);border-radius:12px;padding:8px}
 .regions3d[hidden]{display:none}
@@ -2443,7 +2449,7 @@ function drawNetwork(){
     if(LS.lens !== "all" && !lens.links.includes(type)) return;
     if(!activeCats.has(byId[a].cat) || !activeCats.has(byId[b].cat)) return;
     L_poly(bezier([byId[a].lat, byId[a].lng], [byId[b].lat, byId[b].lng], .15, 20),
-      {color:T.color, weight:1.3, opacity:.5, dashArray:T.dash || null, className:"lens-net"})
+      {color:T.color, weight:1.2, opacity: LS.selected ? .12 : .42, dashArray:T.dash || null, className:"lens-net"})
       .bindTooltip(arcTooltip(a, b, type), {sticky:true}).addTo(netLayer);
   });
   if(!map.hasLayer(netLayer)) netLayer.addTo(map);
@@ -2452,6 +2458,7 @@ function lensSelect(id, opts = {}){
   if(!byId[id]) return;
   LS.selected = id;
   const partners = drawArcs(id) || [];
+  if(LS.network) drawNetwork();   // recede the rest of the network behind the selection
   document.querySelectorAll(".lp-item").forEach(li => li.classList.toggle("sel", li.dataset.id === id));
   const prev = document.querySelector(".lens-pin.sel"); if(prev) prev.classList.remove("sel");
   const m = markers[id]; if(m && m._icon){ const p = m._icon.querySelector(".lens-pin"); if(p) p.classList.add("sel"); }
@@ -2466,6 +2473,7 @@ function lensSelect(id, opts = {}){
 }
 function lensClearSelection(){
   LS.selected = null; arcLayer.clearLayers(); $("arcInfo").classList.remove("on");
+  if(LS.network) drawNetwork();
   document.querySelectorAll(".lp-item.sel").forEach(li => li.classList.remove("sel"));
   document.querySelectorAll(".lens-pin.sel").forEach(p => p.classList.remove("sel"));
   if(window.lens3dSelect) window.lens3dSelect(null);
@@ -2769,7 +2777,7 @@ function setup3d(){
       "circle-stroke-width":2.5, "circle-stroke-color":"#ffc600", "circle-stroke-opacity":dimK(1)}});
   m.addLayer({id:"atlas-sel", type:"circle", source:"atlas", filter:["==", ["get","sel"], true],
     paint:{"circle-radius":15, "circle-opacity":0, "circle-stroke-width":3, "circle-stroke-color":dark ? "#ffffff" : "#111827"}});
-  hover3d = new maplibregl.Popup({closeButton:false, closeOnClick:false, offset:12});
+  hover3d = new maplibregl.Popup({closeButton:false, closeOnClick:false, offset:16, className:"lens-hover"});
   ["atlas-dot", "atlas-halo"].forEach(id => {
     m.on("click", id, e => { const f = e.features && e.features[0]; if(f){ lensSelect(f.properties.id); openDrawer(f.properties.id); } });
     m.on("mousemove", id, e => {
@@ -2847,7 +2855,7 @@ function hexLayer3d(deck){
 }
 function deckTooltip({object, layer}){
   if(!object) return null;
-  const style = {background:"rgba(10,15,30,.95)", color:"#ececf1", fontSize:"12px", maxWidth:"280px", borderRadius:"8px"};
+  const style = {background:"rgba(10,15,30,.97)", color:"#ececf1", fontSize:"13px", fontFamily:"'Red Hat Display',system-ui,sans-serif", lineHeight:"1.45", padding:"8px 11px", maxWidth:"300px", borderRadius:"10px", border:"1px solid rgba(255,255,255,.14)", transform:"translate(14px, 14px)"};
   if(layer && layer.id === "lens-hex"){
     const n = object.elevationValue != null ? object.elevationValue : (object.count != null ? object.count : (object.points || []).length);
     const share = object.colorValue;
@@ -2864,8 +2872,8 @@ function arcs3d(){
     if(!map3d) return;
     const layer = new deck.ArcLayer({id:"lens-arcs", data, pickable:true, greatCircle:false,
       getSourcePosition:d => d.from, getTargetPosition:d => d.to,
-      getSourceColor:d => [...d.color, d.sel ? 245 : 140], getTargetColor:d => [...d.color, d.sel ? 245 : 140],
-      getWidth:d => d.sel ? 3.5 : 1.4, getHeight:.6});
+      getSourceColor:d => [...d.color, d.sel ? 250 : (LS.selected ? 28 : 120)], getTargetColor:d => [...d.color, d.sel ? 250 : (LS.selected ? 28 : 120)],
+      getWidth:d => d.sel ? 4 : (LS.selected ? .8 : 1.3), getHeight:.6});
     const layers = [hexLayer3d(deck), layer].filter(Boolean);
     if(!deckOverlay){
       deckOverlay = new deck.MapboxOverlay({interleaved:false, layers, getTooltip:deckTooltip});
