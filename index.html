@@ -417,7 +417,8 @@ html:not(.dark) .eco-row .v{color:#7a5300}
 .drill-chip.on{display:flex}
 .drill-chip button{min-height:28px;border-radius:99px;border:0;background:rgba(0,0,0,.15);color:#000;font:700 12px inherit;font-family:inherit;padding:4px 10px;cursor:pointer}
 /* 3D: a native MapLibre map over the Leaflet one, created on demand and destroyed on exit */
-#map3d{position:absolute;inset:0;z-index:990;background:#0a0f1e}
+#map3d{position:absolute;inset:0;z-index:990;background:#0a0f1e;transition:opacity .45s ease}
+#map3d.swapping{opacity:.35}
 #map3d .maplibregl-popup-content{background:rgba(10,15,30,.97);color:#ececf1;font:500 13.5px/1.45 'Red Hat Display',system-ui,sans-serif;
   border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:9px 13px;box-shadow:0 8px 28px rgba(0,0,0,.5);max-width:260px}
 #map3d .maplibregl-popup-content b{font-size:15px;font-weight:700}
@@ -707,6 +708,7 @@ browse the <a href="e/">full organization index</a> or use the open dataset
       <button type="button" class="lens-btn" id="netToggle" aria-pressed="false" title="Draw every recorded connection the active lens cares about">🕸 Show network</button>
       <button type="button" class="lens-btn" id="ecoToggle" aria-pressed="false" aria-controls="ecoPanel" title="Live numbers for this lens and the part of the map in view">▤ Ecosystem stats</button>
       <button type="button" class="lens-btn" id="mode3d" aria-pressed="false" title="Tilted 3D map with terrain and buildings, across the whole Commonwealth">⛰ 3D</button>
+      <button type="button" class="lens-btn" id="dayNight" hidden aria-pressed="false" title="Switch the 3D map between day and night">☾ Night</button>
     </div>
     <p class="lens-q" id="lensQ" aria-live="polite"></p>
   </div>
@@ -2704,6 +2706,8 @@ const CHAPTERS = [
   ...["route128","merrimack","worcester","pioneer","berkshires","southcoast","cape"].map(k => {
     const r = REGIONS.find(x => x.key === k); return {name:r.name, region:k, c:r.c, z:r.z}; }),
 ];
+let night3d = null;                     // null = follow the page theme
+const isNight = () => night3d === null ? currentTheme() === "dark" : night3d;
 let map3d = null, deckOverlay = null, deckLoading = null, terrainOK = null, chapterIdx = -1, hover3d = null;
 const webglOK = () => { try{ const c = document.createElement("canvas"); return !!(c.getContext("webgl2") || c.getContext("webgl")); }catch(e){ return false; } };
 function note3d(msg){
@@ -2728,13 +2732,13 @@ function enter3d(){
     el.setAttribute("aria-label", "3D map of Massachusetts. The ranked results list is the map-free view of the same entries.");
     wrap.insertBefore(el, $("map"));
     const c = map.getCenter();
-    map3d = new maplibregl.Map({ container:el, style:new URL(MAP_STYLES[currentTheme()], location.href).href,
+    map3d = new maplibregl.Map({ container:el, style:new URL(MAP_STYLES[isNight() ? "dark" : "light"], location.href).href,
       center:[c.lng, c.lat], zoom:Math.max(5, map.getZoom() - 1), pitch:55, bearing:-15, maxPitch:75,
       attributionControl:{compact:true, customAttribution:'Terrain: <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">AWS Open Data Terrain Tiles</a>'} });
     map3d.addControl(new maplibregl.NavigationControl({visualizePitch:true}), "bottom-right");
     map3d.on("error", e => console.warn("3D map:", e && e.error && e.error.message));
     map3d.on("load", () => { try{ setup3d(); }catch(e){ fail3d(e); } });
-    wrap.classList.add("is3d"); set3dButton(true); LS.mode = "3d"; lensWriteURL();
+    wrap.classList.add("is3d"); set3dButton(true); syncDayNight(); $("dayNight").hidden = false; LS.mode = "3d"; lensWriteURL();
     renderRegions(); $("regions3d").hidden = false;
   }catch(e){ fail3d(e); }
 }
@@ -2751,7 +2755,7 @@ function exit3d(){
   }
   const el = $("map3d"); if(el) el.remove();
   document.querySelector(".map-wrap").classList.remove("is3d");
-  $("regions3d").hidden = true;
+  $("regions3d").hidden = true; $("dayNight").hidden = true;
   set3dButton(false); LS.mode = "2d"; lensWriteURL();
   setTimeout(() => map.invalidateSize(), 30);
 }
@@ -2760,14 +2764,16 @@ function setup3d(){
   const m = map3d, layers = m.getStyle().layers;
   const firstSymbol = (layers.find(l => l.type === "symbol") || {}).id;
   const firstLine = (layers.find(l => l.type === "line") || {}).id;
-  const dark = currentTheme() === "dark";
+  const dark = isNight();
   // buildings: Kendall, the Seaport and Downtown stand up at street zoom
   try{
     m.addLayer({id:"lens-buildings", type:"fill-extrusion", source:"openmaptiles", "source-layer":"building", minzoom:13,
-      paint:{"fill-extrusion-color": dark ? "#26304d" : "#d5d9e2",
+      paint:{"fill-extrusion-color": dark ? ["interpolate", ["linear"], ["coalesce", ["get","render_height"], 8], 0, "#1c2440", 120, "#3a4a7a"] : ["interpolate", ["linear"], ["coalesce", ["get","render_height"], 8], 0, "#e4e7ee", 120, "#c4cad8"],
              "fill-extrusion-height":["coalesce", ["get","render_height"], 8],
              "fill-extrusion-base":["coalesce", ["get","render_min_height"], 0], "fill-extrusion-opacity":.85}}, firstSymbol);
   }catch(e){ console.warn("3D buildings:", e); }
+  try{ m.setLight(dark ? {anchor:"map", position:[1.5, 210, 70], color:"#a9b8ff", intensity:.22}
+                       : {anchor:"map", position:[1.5, 160, 35], color:"#fff4dc", intensity:.5}); }catch(e){}
   addTerrain(firstLine, dark);
   m.addSource("atlas", {type:"geojson", data:geo3d()});
   const dimK = v => ["case", ["get","dim"], v * .3, v];
@@ -2775,6 +2781,9 @@ function setup3d(){
     paint:{"circle-radius":["interpolate", ["linear"], ["zoom"], 7, 9, 12, 20, 15, 46], "circle-color":["get","catColor"],
       "circle-opacity":["*", ["get","opacity"], dimK(.22)], "circle-blur":.5, "circle-pitch-alignment":"map",
       "circle-stroke-width":1.3, "circle-stroke-color":["get","catColor"], "circle-stroke-opacity":["*", ["get","opacity"], dimK(.75)]}});
+  m.addLayer({id:"atlas-glow", type:"circle", source:"atlas",
+    paint:{"circle-radius":["interpolate", ["linear"], ["zoom"], 7, 9, 13, 18], "circle-color":["get","catColor"], "circle-blur":1,
+      "circle-opacity":["*", ["get","opacity"], dimK(dark ? .55 : .12)]}});
   m.addLayer({id:"atlas-dot", type:"circle", source:"atlas",
     paint:{"circle-radius":["interpolate", ["linear"], ["zoom"], 7, ["case", ["get","approx"], 3, 4], 13, ["case", ["get","approx"], 3.5, 7]], "circle-color":["get","catColor"],
       "circle-opacity":["*", ["get","opacity"], dimK(1)], "circle-stroke-width":1.5, "circle-stroke-color":"#ffffff",
@@ -2784,8 +2793,8 @@ function setup3d(){
       "circle-stroke-width":2.5, "circle-stroke-color":"#ffc600", "circle-stroke-opacity":dimK(1)}});
   m.addLayer({id:"atlas-sel", type:"circle", source:"atlas", filter:["==", ["get","sel"], true],
     paint:{"circle-radius":15, "circle-opacity":0, "circle-stroke-width":3, "circle-stroke-color":dark ? "#ffffff" : "#111827"}});
-  hover3d = new maplibregl.Popup({closeButton:false, closeOnClick:false, offset:16, className:"lens-hover"});
-  ["atlas-dot", "atlas-halo"].forEach(id => {
+  if(!hover3d) hover3d = new maplibregl.Popup({closeButton:false, closeOnClick:false, offset:16, className:"lens-hover"});
+  if(!m._lensBound) ["atlas-dot", "atlas-halo"].forEach(id => {
     m.on("click", id, e => { const f = e.features && e.features[0]; if(f){ lensSelect(f.properties.id); openDrawer(f.properties.id); } });
     m.on("mousemove", id, e => {
       const f = e.features && e.features[0]; if(!f || !hover3d) return;
@@ -2795,7 +2804,7 @@ function setup3d(){
     });
     m.on("mouseleave", id, () => { m.getCanvas().style.cursor = ""; if(hover3d) hover3d.remove(); });
   });
-  m.on("moveend", ecoRefreshSoon);
+  if(!m._lensBound){ m.on("moveend", ecoRefreshSoon); m._lensBound = true; }
   arcs3d();
   if(LS.selected) lens3dSelect(LS.selected);
   ecoRefresh();
@@ -2954,6 +2963,21 @@ $("regions3d").addEventListener("keydown", e => {
   e.preventDefault(); goChapter(chapterIdx + (e.key === "ArrowDown" ? 1 : -1));
 });
 $("mode3d").addEventListener("click", () => map3d ? exit3d() : enter3d());
+// day / night: swap the basemap style, then re-add our layers with that mode's light, sky and colours
+function syncDayNight(){
+  const n = isNight(), b = $("dayNight");
+  b.textContent = n ? "☀ Day" : "☾ Night";
+  b.setAttribute("aria-pressed", String(n));
+  b.setAttribute("aria-label", n ? "Switch the 3D map to daytime" : "Switch the 3D map to night");
+}
+$("dayNight").addEventListener("click", () => {
+  if(!map3d) return;
+  night3d = !isNight(); syncDayNight();
+  const m = map3d, el = $("map3d");
+  el.classList.add("swapping");
+  m.once("style.load", () => { try{ setup3d(); }catch(e){ console.warn(e); } setTimeout(() => el.classList.remove("swapping"), 250); });
+  m.setStyle(new URL(MAP_STYLES[isNight() ? "dark" : "light"], location.href).href, {diff:false});
+});
 
 /* ---------- structured data (SEO) ---------- */
 (function jsonLd(){
