@@ -2072,6 +2072,11 @@ function openCompare(){
   const cell=(d,l)=>{ const f=(d.facts||[]).find(x=>x[0]===l); return f?esc(f[1]):"—"; };
   const rows=[
     ["", list.map(d=>`<b>${esc(d.name)}</b><br><span style="color:${cInk(d.cat)}">${cLabel(d.cat)}</span>`)],
+    // Atlas Lenses: "which do you trust less?" answered side by side, with the reasons
+    ["Doubts", list.map(d=>{ const x = signalsOf(d).filter(s=>s.level==="warn"||s.level==="missing");
+      return x.length ? `<b>${x.length}</b>: ${x.map(s=>esc(s.text.split(" — ")[0])).join(" · ")}` : "<b>0</b>: nothing flagged"; })],
+    ["Trust signals", list.map(d=>signalStripHTML(d, true))],
+    ["Source", list.map(d=>`<a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))} ↗</a>`)],
     ["Location", list.map(d=>esc(d.loc))],
     ["What you get", list.map(d=>(d.offers||[]).map(o=>OFFERS_META[o]?.icon+" "+OFFERS_META[o]?.label).join("<br>")||"—")],
     ["Applications", list.map(d=>applyOpen(d) ? (d.applyBy==="rolling"?"Open — rolling":"Open — by "+esc(fmtDeadline(d.applyBy))) : "—")],
@@ -2358,6 +2363,7 @@ function renderResults(rows){
         doubts.map(s => `<li class="sig sig-${s.level}"><span aria-hidden="true">${s.icon}</span>${esc(s.text.split(" — ")[0])}</li>`).join("") + `</ul>` : "") +
       `<div class="lp-actions"><button type="button" class="lp-act" onclick="openDrawer('${id}')">Details →</button>` +
       `<button type="button" class="lp-act" onclick="toggleStar('${id}');lensRefresh({fit:false})" aria-pressed="${starSet.has(id)}">${starSet.has(id) ? "★ Saved" : "☆ Save"}</button>` +
+      `<button type="button" class="lp-act" onclick="toggleCompare('${id}');lensRefresh({fit:false})" aria-pressed="${cmpSet.has(id)}" title="Compare trust side by side (up to 3)">${cmpSet.has(id) ? "⚖ Comparing" : "⚖ Compare"}</button>` +
       `<a class="lp-act" href="${esc(d.url)}" target="_blank" rel="noopener" title="The entry's source: its own website">Source ↗</a></div></li>`;
   };
   list.innerHTML = shown.map(item).join("") +

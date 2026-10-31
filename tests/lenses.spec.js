@@ -157,3 +157,16 @@ test("ecosystem numbers are buttons that filter the map", async ({ page }) => {
   await page.locator("#drillChip button").click();
   await expect(page.locator("#drillChip")).not.toHaveClass(/\bon\b/);
 });
+
+test("compare answers 'which do you trust less?' with counted doubts and their reasons", async ({ page }) => {
+  await page.goto("./?asof=2026-10");
+  await waitForApp(page);
+  const [a, b] = ["venture-guides", "eai"].map(id => byId[id] ? id : null);
+  test.skip(!a || !b, "demo entries not in the data");
+  await page.evaluate(([x, y]) => { toggleCompare(x); toggleCompare(y); openCompare(); }, [a, b]);
+  const doubts = page.locator("#cmpBody tr", { hasText: "Doubts" });
+  await expect(doubts).toBeVisible();
+  await expect(doubts).toContainText("No connections recorded");
+  await expect(doubts).toContainText("Neighborhood-level location");
+  await expect(page.locator("#cmpBody tr", { hasText: "Source" }).locator("a").first()).toHaveAttribute("href", /^https?:\/\//);
+});

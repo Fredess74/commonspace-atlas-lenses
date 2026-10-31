@@ -156,7 +156,8 @@ Note that the brief's draft counts differed from the data in two places, and the
    - Venture Guides has an exact address and was verified in Aug, but has **no connections** and
      **no check size**.
    - EAI was verified in Oct with 1 connection, but its location is **approximate**.
-   - The six-signal strip answers it in three seconds.
+   - The six-signal strip answers it in three seconds. Or press **⚖ Compare** on both (from any
+     lens result): the comparison table counts the doubts and names them side by side.
 5. Judge's pick: paste `?entry=<id>`. The arcs, signals and source link all work. "Click a source":
    **Visit website ↗** in the drawer, or **Source ↗** on every result.
 6. **Maintainer** lens: entries ranked by review priority, with the flags as reasons. Open ▤
