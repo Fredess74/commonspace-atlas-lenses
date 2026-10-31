@@ -144,6 +144,9 @@ kbd{font:600 11px/1 "Red Hat Display",sans-serif;border:1px solid var(--line);bo
     <button type="button" data-view="boston" aria-pressed="true">Boston</button>
     <button type="button" data-view="state" aria-pressed="false">Commonwealth</button>
   </div>
+  <div class="seg" role="group" aria-label="Grouping">
+    <button type="button" id="groupBtn" aria-pressed="true" title="Group crowded areas into named neighborhood bubbles, or show every organization">▦ Group by area</button>
+  </div>
   <div class="search">
     <input id="q" type="search" placeholder="Find an organization…  ( / )" autocomplete="off" aria-label="Find an organization" aria-controls="results">
     <div class="results" id="results" role="listbox"></div>
@@ -671,7 +674,7 @@ function start({ CATS, STAGES, DATA }, EVENTS){
     const L = $("legend"); let h = "";
     const cnt = f => DATA.filter(f).length;
     if(st.lens === "trust"){
-      $("legendTitle").textContent = "Credibility · click to filter";
+      $("legendTitle").textContent = "Credibility · click one to show only it";
       h = ["hi","mid","lo"].map(t => `<button type="button" data-tier="${t}" aria-pressed="${st.tiers.has(t)}"><span class="dot" style="background:${TIER[t]}"></span>${TIER_LABEL[t]}<span class="count">${cnt(d => d.cred.tier === t)}</span></button>`).join("")
         + `<div class="hint">Faded = not verified for months</div>`;
     } else if(st.lens === "links"){
@@ -681,7 +684,7 @@ function start({ CATS, STAGES, DATA }, EVENTS){
            <div class="static"><span style="flex:none;width:16px;height:3px;background:#22d3ee;border-radius:2px"></span>Both sides list the link</div>
            <div class="static"><span style="flex:none;width:16px;height:3px;background:#94a3b8;border-radius:2px"></span>Only one side lists it</div>`;
     } else {
-      $("legendTitle").textContent = "Categories · click to filter";
+      $("legendTitle").textContent = "Categories · click one to show only it";
       h = Object.entries(CATS).map(([k,c]) => `<button type="button" data-cat="${k}" aria-pressed="${st.cats.has(k)}"><span class="dot" style="background:${c.color}"></span>${esc(c.label)}<span class="count">${cnt(d => d.cat === k)}</span></button>`).join("");
     }
     h += `<div class="hint" style="margin-top:8px">Symbols</div>
@@ -689,12 +692,15 @@ function start({ CATS, STAGES, DATA }, EVENTS){
       <div class="static"><span class="dot" style="background:var(--text)"></span>Exact location</div>
       <div class="static"><span class="ring"></span>Approximate location</div>`;
     L.innerHTML = h;
-    L.querySelectorAll("[data-tier]").forEach(b => b.onclick = () => toggle(st.tiers, b.dataset.tier));
-    L.querySelectorAll("[data-cat]").forEach(b => b.onclick = () => toggle(st.cats, b.dataset.cat));
+    L.querySelectorAll("[data-tier]").forEach(b => b.onclick = e => toggle(st.tiers, b.dataset.tier, ["hi","mid","lo"], e));
+    L.querySelectorAll("[data-cat]").forEach(b => b.onclick = e => toggle(st.cats, b.dataset.cat, Object.keys(CATS), e));
   }
-  function toggle(set, key){
-    set.has(key) ? set.delete(key) : set.add(key);
-    if(!set.size) set.add(key);           // never filter everything away
+  // click = show only this one; click it again = show all; Shift/Ctrl-click = add or remove one
+  function toggle(set, key, all, e){
+    const add = e && (e.shiftKey || e.ctrlKey || e.metaKey);
+    if(add){ set.has(key) ? set.delete(key) : set.add(key); if(!set.size) all.forEach(k => set.add(k)); }
+    else if(set.size === 1 && set.has(key)) all.forEach(k => set.add(k));
+    else { set.clear(); set.add(key); }
     if(st.sel && !shown(st.sel)) select(null);
     rebuildIndex(); renderLegend(); render();
   }
@@ -746,7 +752,11 @@ function start({ CATS, STAGES, DATA }, EVENTS){
     render();
   };
   const bind = (id, key) => $(id).onchange = e => { st[key] = e.target.checked; render(); };
-  bind("cols", "cols"); bind("labels", "labels"); bind("group", "group"); bind("arcs", "allArcs"); bind("bldg", "bldg");
+  const setGroup = on => { st.group = on; $("group").checked = on; $("groupBtn").setAttribute("aria-pressed", on);
+    $("groupBtn").textContent = on ? "▦ Group by area" : "• Every organization"; render(); };
+  $("groupBtn").onclick = () => setGroup(!st.group);
+  $("group").onchange = e => setGroup(e.target.checked);
+  bind("cols", "cols"); bind("labels", "labels"); bind("arcs", "allArcs"); bind("bldg", "bldg");
   $("metric").onchange = e => { st.metric = e.target.value; render(); };
   $("togglePanel").onclick = () => {
     const min = $("panel").classList.toggle("min");

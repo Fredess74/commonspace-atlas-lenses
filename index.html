@@ -734,7 +734,7 @@ browse the <a href="e/">full organization index</a> or use the open dataset
       <input id="mapSearch" type="text" placeholder="Search the ecosystem…" autocomplete="off">
       <div class="map-results" id="mapResults"></div>
     </div>
-    <div class="map-legend" id="mapLegend"><h4>Categories · click to toggle</h4></div>
+    <div class="map-legend" id="mapLegend"><h4>Categories · click one to show only it</h4></div>
     <div class="map-view-switch" role="group" aria-label="Map area">
       <button type="button" class="mv-btn" data-view="boston" aria-pressed="true">Boston area</button>
       <button type="button" class="mv-btn" data-view="state" aria-pressed="false">Whole Commonwealth</button>
@@ -1524,13 +1524,20 @@ function setMapTiles(){ if(!map) return; if(mapTiles) map.removeLayer(mapTiles);
     div.type = "button"; div.className = "lg-item"; div.dataset.cat = k;
     div.setAttribute("aria-pressed", "true");
     div.innerHTML = `<span class="lg-dot" style="color:${v.color};background:${v.color}"></span>${v.label}`;
-    div.addEventListener("click", ()=>{
-      if(activeCats.has(k)) activeCats.delete(k); else activeCats.add(k);
-      div.classList.toggle("off", !activeCats.has(k));
-      div.setAttribute("aria-pressed", String(activeCats.has(k)));
+    // click = show only this category; click it again = show all; Shift/Ctrl-click = add or remove one
+    div.addEventListener("click", e=>{
+      const all = Object.keys(CATS);
+      if(e.shiftKey || e.ctrlKey || e.metaKey){
+        if(activeCats.has(k)) activeCats.delete(k); else activeCats.add(k);
+        if(!activeCats.size) all.forEach(c=>activeCats.add(c));
+      } else if(activeCats.size === 1 && activeCats.has(k)) all.forEach(c=>activeCats.add(c));
+      else { activeCats.clear(); activeCats.add(k); }
+      lg.querySelectorAll(".lg-item").forEach(b=>{
+        b.classList.toggle("off", !activeCats.has(b.dataset.cat));
+        b.setAttribute("aria-pressed", String(activeCats.has(b.dataset.cat)));
+      });
       DATA.forEach(d=>{
-        if(d.cat!==k) return;
-        if(activeCats.has(k)) pinGroup().addLayer(markers[d.id]); else pinGroup().removeLayer(markers[d.id]);
+        if(activeCats.has(d.cat)) pinGroup().addLayer(markers[d.id]); else pinGroup().removeLayer(markers[d.id]);
       });
     });
     lg.appendChild(div);
