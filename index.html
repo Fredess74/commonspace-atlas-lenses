@@ -2743,7 +2743,7 @@ function setup3d(){
       "circle-opacity":["*", ["get","opacity"], dimK(.22)], "circle-blur":.5, "circle-pitch-alignment":"map",
       "circle-stroke-width":1.3, "circle-stroke-color":["get","catColor"], "circle-stroke-opacity":["*", ["get","opacity"], dimK(.75)]}});
   m.addLayer({id:"atlas-dot", type:"circle", source:"atlas",
-    paint:{"circle-radius":["case", ["get","approx"], 3.5, ["interpolate", ["linear"], ["zoom"], 7, 4, 13, 7]], "circle-color":["get","catColor"],
+    paint:{"circle-radius":["interpolate", ["linear"], ["zoom"], 7, ["case", ["get","approx"], 3, 4], 13, ["case", ["get","approx"], 3.5, 7]], "circle-color":["get","catColor"],
       "circle-opacity":["*", ["get","opacity"], dimK(1)], "circle-stroke-width":1.5, "circle-stroke-color":"#ffffff",
       "circle-stroke-opacity":dimK(.8)}});
   m.addLayer({id:"atlas-new", type:"circle", source:"atlas", filter:["==", ["get","isNew"], true],
@@ -2814,6 +2814,31 @@ function arcData3d(){
   if(LS.network) EDGES.forEach(([a, b]) => { if(LS.lens === "all" || lens.links.includes(linkTypeOf(a, b))) add(a, b, false); });
   return out;
 }
+// statewide density: extruded hexes, height = Atlas entries, colour = share verified in the
+// last 2 months; fades out by zoom 10, where the pins themselves take over
+let hexOn = true, hexCache = {keep:null, data:null};
+const HEX_COLORS = [[239,68,68],[249,115,22],[251,191,36],[163,230,53],[74,222,128],[45,212,191]];
+function hexLayer3d(deck){
+  const op = Math.max(0, Math.min(.85, (10 - map3d.getZoom()) / 2.5));
+  if(!hexOn || op < .03 || !deck.HexagonLayer) return null;
+  if(hexCache.keep !== LS.keep) hexCache = {keep:LS.keep, data:LS.filtering ? DATA.filter(d => LS.keep.has(d.id)) : DATA};
+  return new deck.HexagonLayer({id:"lens-hex", data:hexCache.data, pickable:true, extruded:true, radius:5000, coverage:.86,
+    elevationScale:1, elevationDomain:[0, 30], elevationRange:[0, 50000], opacity:op, getPosition:d => [d.lng, d.lat],
+    getElevationWeight:1, elevationAggregation:"SUM",
+    getColorWeight:d => DRILLS.fresh.test(d) ? 1 : 0, colorAggregation:"MEAN", colorDomain:[0, 1], colorRange:HEX_COLORS});
+}
+function deckTooltip({object, layer}){
+  if(!object) return null;
+  const style = {background:"rgba(10,15,30,.95)", color:"#ececf1", fontSize:"12px", maxWidth:"280px", borderRadius:"8px"};
+  if(layer && layer.id === "lens-hex"){
+    const n = object.elevationValue != null ? object.elevationValue : (object.count != null ? object.count : (object.points || []).length);
+    const share = object.colorValue;
+    return {style, html:`<b>${n}</b> Atlas entr${n === 1 ? "y" : "ies"} in this hexagon` +
+      (share != null ? `<br>${Math.round(share * 100)}% verified in the last 2 months` : "") +
+      `<br><small>Density of the Atlas, not of AI activity: a short or missing column is a gap in the map.</small>`};
+  }
+  return {style, html:arcTooltip(object.a, object.b, object.type)};
+}
 function arcs3d(){
   if(!map3d) return;
   const data = arcData3d();
@@ -2823,12 +2848,12 @@ function arcs3d(){
       getSourcePosition:d => d.from, getTargetPosition:d => d.to,
       getSourceColor:d => [...d.color, d.sel ? 245 : 140], getTargetColor:d => [...d.color, d.sel ? 245 : 140],
       getWidth:d => d.sel ? 3.5 : 1.4, getHeight:.6});
+    const layers = [hexLayer3d(deck), layer].filter(Boolean);
     if(!deckOverlay){
-      deckOverlay = new deck.MapboxOverlay({interleaved:false, layers:[layer],
-        getTooltip:({object}) => object && {html:arcTooltip(object.a, object.b, object.type),
-          style:{background:"rgba(10,15,30,.95)", color:"#ececf1", fontSize:"12px", maxWidth:"280px", borderRadius:"8px"}}});
+      deckOverlay = new deck.MapboxOverlay({interleaved:false, layers, getTooltip:deckTooltip});
       map3d.addControl(deckOverlay);
-    } else deckOverlay.setProps({layers:[layer]});
+      map3d.on("zoomend", () => { if(deckOverlay) arcs3d(); });
+    } else deckOverlay.setProps({layers});
   }).catch(e => { console.warn(e); arcsFallback3d(data); });
 }
 // no deck.gl: the same curves as flat MapLibre lines, one layer per type for its dash pattern
@@ -2873,7 +2898,9 @@ function renderRegions(){
   nav.innerHTML = `<h2>Region chapters · ↑/↓</h2>` + CHAPTERS.map((ch, i) =>
     `<button type="button" class="rg-btn" data-i="${i}" aria-current="${i === chapterIdx}"><span>${esc(ch.name)}</span><span class="v">${chapterCount(ch)}</span></button>`).join("") +
     (cur && !chapterCount(cur) ? `<p class="rg-gap">No Atlas entries in ${esc(cur.name)} yet${LS.lens !== "all" ? " for this lens" : ""}. ` +
-      `This is a gap in the map, not proof there's no AI here. <button type="button" class="lp-act" onclick="suggestEntry()">➕ Suggest an entry</button></p>` : "");
+      `This is a gap in the map, not proof there's no AI here. <button type="button" class="lp-act" onclick="suggestEntry()">➕ Suggest an entry</button></p>` : "") +
+    `<button type="button" class="rg-btn" id="hexToggle" aria-pressed="${hexOn}"><span>▦ Density hexes ${hexOn ? "on" : "off"}</span></button>` +
+    `<p class="rg-gap" style="color:var(--muted)">Hex height = Atlas entries; colour = share verified in the last 2 months (red low → teal high). Fades out as you zoom in.</p>`;
 }
 function fly3d(ch){
   if(!map3d) return;
@@ -2885,7 +2912,10 @@ function goChapter(i){
   fly3d(CHAPTERS[chapterIdx]); renderRegions();
   const b = $("regions3d").querySelector(`.rg-btn[data-i="${chapterIdx}"]`); if(b) b.focus();
 }
-$("regions3d").addEventListener("click", e => { const b = e.target.closest(".rg-btn"); if(b) goChapter(+b.dataset.i); });
+$("regions3d").addEventListener("click", e => {
+  if(e.target.closest("#hexToggle")){ hexOn = !hexOn; renderRegions(); arcs3d(); return; }
+  const b = e.target.closest(".rg-btn"); if(b) goChapter(+b.dataset.i);
+});
 $("regions3d").addEventListener("keydown", e => {
   if(e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
   e.preventDefault(); goChapter(chapterIdx + (e.key === "ArrowDown" ? 1 : -1));
